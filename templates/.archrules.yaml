@@ -1,0 +1,55 @@
+version: "1.0"
+project_type: "nextjs-clean-arch"
+
+# 1. Quy định ranh giới giữa các tầng (Layer Boundaries)
+layers:
+  ui:
+    path: "src/components/**"
+    cannot_import:
+      - "src/db/**"
+      - "src/services/backend/**"
+  app:
+    path: "src/app/**"
+    cannot_import:
+      - "src/db/**"
+  services:
+    path: "src/services/**"
+    cannot_import:
+      - "src/components/**"
+      - "src/app/**"
+  db:
+    path: "src/db/**"
+    cannot_import:
+      - "src/components/**"
+      - "src/services/**"
+      - "src/app/**"
+
+# 2. Ngưỡng cảnh báo độ sạch code (Clean Code Thresholds)
+thresholds:
+  max_file_lines: 300
+  max_function_lines: 50
+
+# 3. Danh sách thư viện được phép dùng (Approved Dependencies)
+dependencies:
+  allowed_ui:
+    - "lucide-react"
+    - "framer-motion"
+    - "@radix-ui/*"
+    - "clsx"
+    - "tailwind-merge"
+  allowed_validation:
+    - "zod"
+  allowed_core:
+    - "react"
+    - "react-dom"
+    - "next"
+    - "next/*"
+  strict_mode: true
+
+# 4. LLM Configuration (Tier 2 Alignment)
+ai_eval:
+  provider: "gemini" # gemini | ollama | openai
+  model: "gemini-2.5-flash"
+  check_semantic_duplication: true
+  check_prd_compliance: true
+  prd_path: "PRD.md"

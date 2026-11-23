@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vibe-cache.json
+vibe-report.html
+.env
+.env.*
+!.env.example
+*.log
+coverage/

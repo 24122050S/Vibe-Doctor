@@ -1,0 +1,63 @@
+version: "1.0"
+project_type: "cli-clean-arch"
+
+ignore:
+  - "tests/**"
+  - "bin/**"
+  - "examples/**"
+
+# Dogfooding Vibe Doctor's own Modular Clean Architecture:
+# Guideline #2: Keep AST logic completely decoupled from LLM/AI Provider & Reporters.
+layers:
+  config:
+    path: "src/config/**"
+    cannot_import:
+      - "src/ast/**"
+      - "src/ai/**"
+      - "src/reporters/**"
+  utils:
+    path: "src/utils/**"
+    cannot_import:
+      - "src/ast/**"
+      - "src/ai/**"
+      - "src/reporters/**"
+  ast:
+    path: "src/ast/**"
+    cannot_import:
+      - "src/ai/**"
+      - "src/reporters/**"
+  ai:
+    path: "src/ai/**"
+    cannot_import:
+      - "src/reporters/**"
+  reporters:
+    path: "src/reporters/**"
+    cannot_import:
+      - "src/ast/**"
+      - "src/ai/**"
+
+thresholds:
+  max_file_lines: 330
+  max_function_lines: 120
+
+dependencies:
+  allowed_cli:
+    - "commander"
+    - "chalk"
+    - "ora"
+  allowed_ast:
+    - "ts-morph"
+    - "picomatch"
+  allowed_config:
+    - "zod"
+    - "yaml"
+  allowed_ai:
+    - "@google/genai"
+  strict_mode: true
+
+ai_eval:
+  provider: "gemini"
+  model: "gemini-2.5-flash"
+  check_semantic_duplication: true
+  check_prd_compliance: true
+  prd_path: "PRD.md"
