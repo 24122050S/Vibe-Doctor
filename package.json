@@ -1,6 +1,6 @@
 {
   "name": "vibe-doctor",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "AI Codebase Governance & Architecture Guardrail CLI — Two-tier AST + LLM auditor with Auto Fix-Prompt Generation",
   "type": "module",
   "bin": {
@@ -13,6 +13,7 @@
     "dist",
     "templates",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE"
   ],
   "scripts": {

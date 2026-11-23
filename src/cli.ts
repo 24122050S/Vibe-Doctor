@@ -5,20 +5,19 @@ import ora from 'ora';
 import { z } from 'zod';
 import { checkProviderAvailability, createLlmProvider } from './ai/provider.js';
 import { buildFunctionIndex, VIBE_CACHE_FILENAME } from './ast/indexer.js';
+import {
+  registerMcpCommand,
+  registerSyncRulesCommand,
+  registerWatchCommand,
+} from './cliExtraCommands.js';
 import { ConfigLoadError, loadArchRules } from './config/loader.js';
 import { AVAILABLE_PRESETS } from './config/presets.js';
-import { startMcpStdioServer } from './mcp/server.js';
+import type { runAudit as RunAuditFn } from './index.js';
 import { generateHtmlReport } from './reporters/htmlReport.js';
-import {
-  AgentRuleTarget,
-  DEFAULT_RULE_TARGETS,
-  syncAgentRules,
-} from './reporters/ruleSync.js';
 import { renderTerminalReport } from './reporters/terminal.js';
 import { loadProjectEnvFiles } from './utils/env.js';
 import { initProject } from './utils/init.js';
 import { logger } from './utils/logger.js';
-import type { runAudit as RunAuditFn } from './index.js';
 
 function registerCheckAiCommand(program: Command): void {
   program
@@ -68,57 +67,6 @@ function registerCheckAiCommand(program: Command): void {
     });
 }
 
-function registerSyncRulesCommand(program: Command): void {
-  program
-    .command('sync-rules')
-    .description(
-      'Tự động sinh rule kiến trúc chủ động (.cursor/rules, AGENTS.md, CLAUDE.md) từ .archrules.yaml'
-    )
-    .argument('[dir]', 'Thư mục gốc dự án', '.')
-    .option('-c, --config <path>', 'Đường dẫn tùy chỉnh tới file .archrules.yaml')
-    .option(
-      '-t, --targets <targets>',
-      'Danh sách đích phân tách bằng dấu phẩy (cursor,agents,claude,windsurf)',
-      DEFAULT_RULE_TARGETS.join(',')
-    )
-    .option('--no-index', 'Không đính kèm danh sách hàm hiện có vào file rule')
-    .action(
-      (
-        dir: string,
-        opts: { config?: string; targets?: string; index?: boolean }
-      ) => {
-        try {
-          const projectRoot = path.resolve(dir);
-          const { config } = loadArchRules(projectRoot, { configPath: opts.config });
-          const validSet = new Set<AgentRuleTarget>(['cursor', 'agents', 'claude', 'windsurf']);
-          const parsedTargets = (opts.targets ?? '')
-            .split(',')
-            .map((s) => s.trim().toLowerCase() as AgentRuleTarget)
-            .filter((t) => validSet.has(t));
-
-          const targets = parsedTargets.length > 0 ? parsedTargets : DEFAULT_RULE_TARGETS;
-          const exportedFunctions =
-            opts.index !== false
-              ? buildFunctionIndex(projectRoot, { persist: true }).entries
-              : [];
-
-          const res = syncAgentRules(projectRoot, config, {
-            targets,
-            exportedFunctions,
-          });
-
-          for (const item of res.files) {
-            const verb = item.action === 'created' ? 'Đã tạo mới' : 'Đã cập nhật';
-            logger.success(`[${item.target}] ${verb}: ${item.filePath}`);
-          }
-        } catch (err) {
-          logger.error(err instanceof Error ? err.message : String(err));
-          process.exitCode = 1;
-        }
-      }
-    );
-}
-
 function registerInitCommand(program: Command): void {
   program
     .command('init')
@@ -151,27 +99,11 @@ function registerInitCommand(program: Command): void {
     });
 }
 
-function registerMcpCommand(program: Command, runAuditFn: typeof RunAuditFn): void {
-  program
-    .command('mcp')
-    .description(
-      'Khởi chạy MCP Server (stdio JSON-RPC 2.0) tích hợp trực tiếp vào Antigravity / Cursor / Claude'
-    )
-    .argument('[dir]', 'Thư mục gốc dự án mặc định', '.')
-    .action(async (dir: string) => {
-      await startMcpStdioServer({
-        defaultProjectRoot: path.resolve(dir),
-        serverVersion: '1.3.0',
-        runAuditFn,
-      });
-    });
-}
-
 export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
   const program = new Command()
     .name('vibe-doctor')
     .description('🩺 AI Codebase Governance & Architecture Guardrail CLI')
-    .version('1.3.0');
+    .version('1.4.0');
 
   program
     .command('audit', { isDefault: true })
@@ -254,6 +186,7 @@ export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
 
   registerCheckAiCommand(program);
   registerSyncRulesCommand(program);
+  registerWatchCommand(program, runAuditFn);
   registerMcpCommand(program, runAuditFn);
 
   return program;

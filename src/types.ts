@@ -3,6 +3,7 @@ export type IssueTier = 'ast' | 'ai';
 export type IssueRuleId =
   | 'layer-boundary'
   | 'circular-dependency'
+  | 'hardcoded-secret'
   | 'file-size'
   | 'function-size'
   | 'unapproved-dependency'

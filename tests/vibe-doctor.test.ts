@@ -17,6 +17,7 @@ import {
   loadProjectEnvFiles,
   parseDotEnvContent,
   runAudit,
+  shouldTriggerOnWatchPath,
   syncAgentRules,
 } from '../src/index.js';
 import { generateHtmlReport } from '../src/reporters/htmlReport.js';
@@ -615,5 +616,41 @@ describe('vibe-doctor — Init, Git Staged Mode & HTML Dependency Graph Report',
     );
     expect((syncResp?.result as { isError?: boolean }).isError).toBe(false);
     expect(fs.existsSync(path.join(root, '.cursor', 'rules', 'vibe-doctor.mdc'))).toBe(true);
+  });
+
+  it('catches hardcoded API keys & DB credentials with redacted snippets while ignoring process.env and placeholders', async () => {
+    const root = createTempProject();
+    writeProjectFile(root, '.archrules.yaml', SAMPLE_ARCHRULES);
+
+    // Construct fake token patterns dynamically so static git scanners don't flag test source
+    const fakeGeminiKey = `AIza${'SyB9x8W7v6U5t4S3r2Q1p0O9n8M7l6K5j4I'}`;
+    const fakePgUri = `postgresql://admin:Sup3rS3cretPass99@db.internal.example.com:5432/prod`;
+
+    writeProjectFile(
+      root,
+      'src/services/aiClient.ts',
+      [
+        `const safeKey = process.env.GEMINI_API_KEY;`,
+        `const placeholderKey = 'your-api-key-here';`,
+        `const leakedGemini = '${fakeGeminiKey}';`,
+        `const leakedDb = '${fakePgUri}';`,
+        `export const cfg = { safeKey, placeholderKey, leakedGemini, leakedDb };`,
+      ].join('\n')
+    );
+
+    const report = await runAudit({ projectRoot: root, ai: false });
+    const secretIssues = report.issues.filter((i) => i.ruleId === 'hardcoded-secret');
+
+    expect(secretIssues).toHaveLength(2);
+    expect(secretIssues[0].severity).toBe('critical');
+    // Ensure raw secret is redacted in snippets and messages
+    expect(secretIssues[0].snippet).not.toContain(fakeGeminiKey);
+    expect(secretIssues[0].snippet).toContain('****...****');
+
+    // Verify watch path filter ignores node_modules/.git/report artifacts and accepts source files
+    expect(shouldTriggerOnWatchPath('src/components/Checkout.tsx')).toBe(true);
+    expect(shouldTriggerOnWatchPath('.archrules.yaml')).toBe(true);
+    expect(shouldTriggerOnWatchPath('node_modules/pkg/index.js')).toBe(false);
+    expect(shouldTriggerOnWatchPath('vibe-report.html')).toBe(false);
   });
 });

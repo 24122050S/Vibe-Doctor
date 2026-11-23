@@ -59,7 +59,7 @@ flowchart TD
     CLI --> Tier1["⚡ Tầng 1: Static AST Scanner (ts-morph)<br/>0 API Cost · < 300ms"]
     Tier1 --> R1["Layer Boundary & Circular Deps<br/>(Forbidden Imports & A -> B -> A)"]
     Tier1 --> R2["Clean Code Limits<br/>(Max File & Function LOC)"]
-    Tier1 --> R3["Dependency Whitelist<br/>(strict_mode & banned)"]
+    Tier1 --> R3["Dependency & Secret Guard<br/>(strict_mode & hardcoded-secret)"]
 
     R1 & R2 & R3 --> Gate{"Tầng 1 Pass<br/>hoặc có cờ --semantic?"}
 
@@ -200,6 +200,7 @@ npx vibe-doctor check-ai --ping
 | Lệnh | Mô tả | Cờ tùy chọn nổi bật |
 | :--- | :--- | :--- |
 | `vibe-doctor audit [dir]` | Kiểm toán kiến trúc 2 tầng và sinh Auto Fix-Prompt | `-s, --staged`, `--semantic`, `--no-ai`, `--strict`, `--json`, `--html [file]`, `-c <path>` |
+| `vibe-doctor watch [dir]` | Giám sát thời gian thực — tự động quét AST mỗi khi AI lưu file | `--semantic`, `--strict`, `--html [file]`, `-c <path>` |
 | `vibe-doctor sync-rules [dir]` | Sinh `.cursor/rules/vibe-doctor.mdc`, `AGENTS.md`, `CLAUDE.md` từ `.archrules.yaml` + danh sách hàm sẵn có | `-t, --targets <list>`, `--no-index`, `-c <path>` |
 | `vibe-doctor init [dir]` | Tạo `.archrules.yaml` theo preset & gắn Git `pre-commit` hook | `-p, --preset <nextjs\|nestjs\|react-vite\|express>`, `-f, --force`, `--no-hook` |
 | `vibe-doctor index [dir]` | Quét AST lập chỉ mục hàm vào `.vibe-cache.json` | — |

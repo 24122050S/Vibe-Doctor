@@ -13,6 +13,7 @@ import { checkCircularDependencies } from './ast/rules/circularDeps.js';
 import { checkDependencies } from './ast/rules/depsCheck.js';
 import { checkFileAndFunctionSizes } from './ast/rules/fileSize.js';
 import { checkLayerBoundaries } from './ast/rules/layerBoundary.js';
+import { checkHardcodedSecrets } from './ast/rules/secretLeak.js';
 import { buildCliProgram } from './cli.js';
 import { loadArchRules } from './config/loader.js';
 import { AuditIssue, AuditReport, FunctionSignatureEntry } from './types.js';
@@ -34,6 +35,8 @@ export {
   type SyncRulesResult,
 } from './reporters/ruleSync.js';
 export { searchIndexedFunctions } from './ast/functionSearch.js';
+export { checkHardcodedSecrets, maskSecretValue } from './ast/rules/secretLeak.js';
+export { startProjectWatcher, shouldTriggerOnWatchPath } from './utils/watcher.js';
 export {
   handleMcpJsonRpcMessage,
   startMcpStdioServer,
@@ -174,6 +177,9 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
   const circularIssues = config.thresholds.detect_circular_dependencies
     ? checkCircularDependencies(projectRoot, sourceFiles, aliasConfig, edges)
     : [];
+  const secretIssues = config.thresholds.detect_hardcoded_secrets
+    ? checkHardcodedSecrets(sourceFiles)
+    : [];
   const sizeIssues = checkFileAndFunctionSizes(sourceFiles, config);
   const checkPkgJson =
     collected.mode === 'full' || collected.allStagedFiles.some((f) => f === 'package.json');
@@ -181,7 +187,13 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
     checkPackageJson: checkPkgJson,
   });
 
-  const astIssues: AuditIssue[] = [...layerIssues, ...circularIssues, ...sizeIssues, ...depIssues];
+  const astIssues: AuditIssue[] = [
+    ...layerIssues,
+    ...circularIssues,
+    ...secretIssues,
+    ...sizeIssues,
+    ...depIssues,
+  ];
   const astDurationMs = performance.now() - astStart;
   const hasAstCritical = astIssues.some((i) => i.severity === 'critical');
 

@@ -1,0 +1,42 @@
+name: Release Vibe Doctor
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  github-release:
+    name: Build, Verify & Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build & Run Test Suite
+        run: npm run build && npm test
+
+      - name: Strict Architecture Self-Audit
+        run: node bin/vibe-doctor.js audit --strict --no-ai
+
+      - name: Create npm tarball artifact
+        run: npm pack
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: vibe-doctor-*.tgz
+          generate_release_notes: true
