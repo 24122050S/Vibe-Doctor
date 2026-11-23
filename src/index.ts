@@ -33,6 +33,15 @@ export {
   type SyncRulesOptions,
   type SyncRulesResult,
 } from './reporters/ruleSync.js';
+export { searchIndexedFunctions } from './ast/functionSearch.js';
+export {
+  handleMcpJsonRpcMessage,
+  startMcpStdioServer,
+  type JsonRpcRequest,
+  type JsonRpcResponse,
+  type McpServerContext,
+} from './mcp/server.js';
+export { VIBE_MCP_TOOLS, executeVibeMcpTool } from './mcp/tools.js';
 
 export interface RunAuditOptions {
   projectRoot?: string;

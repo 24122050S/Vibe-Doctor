@@ -205,6 +205,25 @@ npx vibe-doctor check-ai --ping
 | `vibe-doctor index [dir]` | Quét AST lập chỉ mục hàm vào `.vibe-cache.json` | — |
 | `vibe-doctor report [dir]` | Tạo dashboard `vibe-report.html` kèm Dependency Graph | `-o <output>`, `--semantic`, `--no-ai`, `-c <path>` |
 | `vibe-doctor check-ai [dir]` | Kiểm tra `.env` / API Key & ping thử kết nối LLM Tầng 2 | `--ping`, `-c <path>` |
+| `vibe-doctor mcp [dir]` | Khởi chạy **MCP Server (stdio)** cho Antigravity / Cursor / Claude | — |
+
+---
+
+## 🔌 Tích hợp MCP Server cho Antigravity / Cursor / Claude Desktop
+
+Thay vì phải copy-paste `Fix Prompt` thủ công, bạn có thể gắn `vibe-doctor` trực tiếp làm **Model Context Protocol (MCP) Server** để AI Agent tự tra cứu hàm sẵn có (`vibe_search_functions`), tự kiểm toán (`vibe_audit`) và tự đồng bộ rule (`vibe_sync_rules`) trong vòng lặp khép kín:
+
+```json
+{
+  "mcpServers": {
+    "vibe-doctor": {
+      "command": "vibe-doctor",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+*(Nếu chưa chạy `npm link`, bạn có thể trỏ `"command": "node"`, `"args": ["D:/duong-dan/Vibe-Doctor/bin/vibe-doctor.js", "mcp"]` hoặc `"command": "npx"`, `"args": ["-y", "vibe-doctor", "mcp"]`).*
 
 ---
 

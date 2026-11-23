@@ -11,6 +11,7 @@ import {
 } from '../src/ast/indexer.js';
 import {
   AVAILABLE_PRESETS,
+  handleMcpJsonRpcMessage,
   initProject,
   loadArchRules,
   loadProjectEnvFiles,
@@ -519,5 +520,100 @@ describe('vibe-doctor — Init, Git Staged Mode & HTML Dependency Graph Report',
 
     const badRoot = createTempProject();
     expect(() => initProject(badRoot, { preset: 'unknown-framework' })).toThrow(/Preset không hợp lệ/);
+  });
+
+  it('serves MCP JSON-RPC 2.0 protocol (initialize, tools/list, vibe_search_functions, vibe_audit, vibe_sync_rules)', async () => {
+    const root = createTempProject();
+    writeProjectFile(root, '.archrules.yaml', SAMPLE_ARCHRULES);
+    writeProjectFile(
+      root,
+      'src/utils/currency.ts',
+      `/** Định dạng tiền tệ VNĐ chuẩn */\nexport function formatVND(amount: number): string { return String(amount); }\n`
+    );
+    writeProjectFile(root, 'src/db/index.ts', `export const prisma = {};\n`);
+    writeProjectFile(
+      root,
+      'src/components/BadCheckout.tsx',
+      `import { prisma } from '@/db';\nexport const BadCheckout = () => prisma;\n`
+    );
+
+    const ctx = { defaultProjectRoot: root, serverVersion: '1.3.0', runAuditFn: runAudit };
+
+    // 1. initialize handshake
+    const initResp = await handleMcpJsonRpcMessage(
+      { jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2024-11-05' } },
+      ctx
+    );
+    expect(initResp?.result).toMatchObject({
+      protocolVersion: '2024-11-05',
+      serverInfo: { name: 'vibe-doctor', version: '1.3.0' },
+    });
+
+    // 2. notifications/initialized returns null
+    const notifResp = await handleMcpJsonRpcMessage(
+      { jsonrpc: '2.0', method: 'notifications/initialized' },
+      ctx
+    );
+    expect(notifResp).toBeNull();
+
+    // 3. tools/list exposes all 3 Vibe Doctor tools
+    const listResp = await handleMcpJsonRpcMessage(
+      { jsonrpc: '2.0', id: 2, method: 'tools/list' },
+      ctx
+    );
+    const tools = (listResp?.result as { tools: Array<{ name: string }> }).tools;
+    expect(tools.map((t) => t.name)).toEqual([
+      'vibe_audit',
+      'vibe_search_functions',
+      'vibe_sync_rules',
+    ]);
+
+    // 4. tools/call -> vibe_search_functions finds formatVND
+    const searchResp = await handleMcpJsonRpcMessage(
+      {
+        jsonrpc: '2.0',
+        id: 3,
+        method: 'tools/call',
+        params: {
+          name: 'vibe_search_functions',
+          arguments: { query: 'format currency VND', refreshIndex: true },
+        },
+      },
+      ctx
+    );
+    const searchJson = JSON.parse(
+      (searchResp?.result as { content: Array<{ text: string }> }).content[0].text
+    ) as { matches: Array<{ id: string }> };
+    expect(searchJson.matches[0]?.id).toBe('src/utils/currency.ts::formatVND');
+
+    // 5. tools/call -> vibe_audit catches BadCheckout.tsx layer boundary violation
+    const auditResp = await handleMcpJsonRpcMessage(
+      {
+        jsonrpc: '2.0',
+        id: 4,
+        method: 'tools/call',
+        params: { name: 'vibe_audit', arguments: {} },
+      },
+      ctx
+    );
+    const auditJson = JSON.parse(
+      (auditResp?.result as { content: Array<{ text: string }> }).content[0].text
+    ) as { passed: boolean; summary: { critical: number }; fixPrompt: string };
+    expect(auditJson.passed).toBe(false);
+    expect(auditJson.summary.critical).toBe(1);
+    expect(auditJson.fixPrompt).toContain('BadCheckout.tsx');
+
+    // 6. tools/call -> vibe_sync_rules generates cursor rule
+    const syncResp = await handleMcpJsonRpcMessage(
+      {
+        jsonrpc: '2.0',
+        id: 5,
+        method: 'tools/call',
+        params: { name: 'vibe_sync_rules', arguments: { targets: ['cursor'] } },
+      },
+      ctx
+    );
+    expect((syncResp?.result as { isError?: boolean }).isError).toBe(false);
+    expect(fs.existsSync(path.join(root, '.cursor', 'rules', 'vibe-doctor.mdc'))).toBe(true);
   });
 });

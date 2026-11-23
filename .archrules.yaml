@@ -15,26 +15,31 @@ layers:
       - "src/ast/**"
       - "src/ai/**"
       - "src/reporters/**"
+      - "src/mcp/**"
   utils:
     path: "src/utils/**"
     cannot_import:
       - "src/ast/**"
       - "src/ai/**"
       - "src/reporters/**"
+      - "src/mcp/**"
   ast:
     path: "src/ast/**"
     cannot_import:
       - "src/ai/**"
       - "src/reporters/**"
+      - "src/mcp/**"
   ai:
     path: "src/ai/**"
     cannot_import:
       - "src/reporters/**"
+      - "src/mcp/**"
   reporters:
     path: "src/reporters/**"
     cannot_import:
       - "src/ast/**"
       - "src/ai/**"
+      - "src/mcp/**"
 
 thresholds:
   max_file_lines: 330

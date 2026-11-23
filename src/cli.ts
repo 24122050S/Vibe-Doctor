@@ -7,6 +7,7 @@ import { checkProviderAvailability, createLlmProvider } from './ai/provider.js';
 import { buildFunctionIndex, VIBE_CACHE_FILENAME } from './ast/indexer.js';
 import { ConfigLoadError, loadArchRules } from './config/loader.js';
 import { AVAILABLE_PRESETS } from './config/presets.js';
+import { startMcpStdioServer } from './mcp/server.js';
 import { generateHtmlReport } from './reporters/htmlReport.js';
 import {
   AgentRuleTarget,
@@ -150,11 +151,27 @@ function registerInitCommand(program: Command): void {
     });
 }
 
+function registerMcpCommand(program: Command, runAuditFn: typeof RunAuditFn): void {
+  program
+    .command('mcp')
+    .description(
+      'Khởi chạy MCP Server (stdio JSON-RPC 2.0) tích hợp trực tiếp vào Antigravity / Cursor / Claude'
+    )
+    .argument('[dir]', 'Thư mục gốc dự án mặc định', '.')
+    .action(async (dir: string) => {
+      await startMcpStdioServer({
+        defaultProjectRoot: path.resolve(dir),
+        serverVersion: '1.3.0',
+        runAuditFn,
+      });
+    });
+}
+
 export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
   const program = new Command()
     .name('vibe-doctor')
     .description('🩺 AI Codebase Governance & Architecture Guardrail CLI')
-    .version('1.2.0');
+    .version('1.3.0');
 
   program
     .command('audit', { isDefault: true })
@@ -237,6 +254,7 @@ export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
 
   registerCheckAiCommand(program);
   registerSyncRulesCommand(program);
+  registerMcpCommand(program, runAuditFn);
 
   return program;
 }
