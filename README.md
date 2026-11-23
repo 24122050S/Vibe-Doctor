@@ -6,11 +6,13 @@
 
 *Ngăn chặn triệt để hiện tượng **Architecture Drift** khi lập trình cùng AI Coding Agents (Cursor, Claude Code, Windsurf, Antigravity).*
 
+[![CI](https://github.com/24122050S/Vibe-Doctor/actions/workflows/ci.yml/badge.svg)](https://github.com/24122050S/Vibe-Doctor/actions/workflows/ci.yml)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)](./tsconfig.json)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D18.0-339933?logo=node.js&logoColor=white)](./package.json)
 [![AST Latency](https://img.shields.io/badge/Tier%201%20AST-%3C%20300ms-10B981)](./src/ast/parser.ts)
 [![LLM Providers](https://img.shields.io/badge/Tier%202%20AI-Gemini%20%7C%20Ollama%20%7C%20OpenAI-8B5CF6)](./src/ai/provider.ts)
-[![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B)](./package.json)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-24122050S%2FVibe--Doctor-181717?logo=github)](https://github.com/24122050S/Vibe-Doctor)
+[![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B)](./LICENSE)
 
 </div>
 

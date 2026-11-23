@@ -38,6 +38,14 @@
   "engines": {
     "node": ">=18.0.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/24122050S/Vibe-Doctor.git"
+  },
+  "homepage": "https://github.com/24122050S/Vibe-Doctor#readme",
+  "bugs": {
+    "url": "https://github.com/24122050S/Vibe-Doctor/issues"
+  },
   "dependencies": {
     "@google/genai": "^1.0.0",
     "chalk": "^5.4.1",
