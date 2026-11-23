@@ -14,6 +14,8 @@
 [![GitHub Repo](https://img.shields.io/badge/GitHub-24122050S%2FVibe--Doctor-181717?logo=github)](https://github.com/24122050S/Vibe-Doctor)
 [![License: MIT](https://img.shields.io/badge/License-MIT-F59E0B)](./LICENSE)
 
+[**📖 Cẩm nang Hướng dẫn Sử dụng Chi tiết (Kèm Hình ảnh)**](./docs/USER_GUIDE.md) · [**🏗️ Đặc tả Kiến trúc (RFC)**](./docs/ARCHITECTURE_SPEC.md) · [**📋 Lịch sử Phiên bản**](./CHANGELOG.md)
+
 </div>
 
 ---

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 440" width="960" height="440">
+  <defs>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="960" height="440" rx="16" fill="url(#cardBg)" stroke="#1f2937" stroke-width="1.5" />
+  <text x="480" y="40" text-anchor="middle" fill="#f8fafc" font-family="Inter, Segoe UI, sans-serif" font-size="20" font-weight="700">
+    🩺 VIBE DOCTOR — QUY TRÌNH SỬ DỤNG 4 BƯỚC CHUẨN THỰC TẾ
+  </text>
+  <text x="480" y="64" text-anchor="middle" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="13">
+    Từ khởi tạo luật kiến trúc, phòng ngừa chủ động, giám sát lúc code đến tự chữa lành khép kín
+  </text>
+
+  <!-- Step 1 -->
+  <g transform="translate(28, 92)">
+    <rect width="212" height="316" rx="12" fill="#0f172a" stroke="#38bdf8" stroke-width="1.4" />
+    <rect x="16" y="16" width="84" height="24" rx="12" fill="#0c4a6e" />
+    <text x="58" y="32" text-anchor="middle" fill="#7dd3fc" font-family="Inter, Segoe UI, sans-serif" font-size="11" font-weight="700">BƯỚC 1 · KHỞI TẠO</text>
+    <text x="16" y="66" fill="#f1f5f9" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700">Thiết lập Luật &amp; Hook</text>
+    <text x="16" y="90" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">Tạo .archrules.yaml theo</text>
+    <text x="16" y="108" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">framework &amp; gắn Git Hook.</text>
+
+    <rect x="14" y="128" width="184" height="72" rx="8" fill="#020617" stroke="#1e293b" />
+    <text x="24" y="150" fill="#38bdf8" font-family="Consolas, monospace" font-size="11">$ vibe-doctor init \</text>
+    <text x="32" y="168" fill="#67e8f9" font-family="Consolas, monospace" font-size="11">--preset nextjs</text>
+    <text x="24" y="188" fill="#64748b" font-family="Consolas, monospace" font-size="10"># nestjs | react-vite | express</text>
+
+    <text x="16" y="228" fill="#34d399" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">✔ Kết quả sinh ra:</text>
+    <text x="20" y="250" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• .archrules.yaml</text>
+    <text x="20" y="270" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• .git/hooks/pre-commit</text>
+    <text x="20" y="290" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• Tự chặn commit lỗi!</text>
+  </g>
+
+  <!-- Step 2 -->
+  <g transform="translate(258, 92)">
+    <rect width="212" height="316" rx="12" fill="#0f172a" stroke="#a855f7" stroke-width="1.4" />
+    <rect x="16" y="16" width="96" height="24" rx="12" fill="#4c1d95" />
+    <text x="64" y="32" text-anchor="middle" fill="#e9d5ff" font-family="Inter, Segoe UI, sans-serif" font-size="11" font-weight="700">BƯỚC 2 · PHÒNG BỆNH</text>
+    <text x="16" y="66" fill="#f1f5f9" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700">Đồng bộ Rule cho AI</text>
+    <text x="16" y="90" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">Dạy AI biết ranh giới tầng &amp;</text>
+    <text x="16" y="108" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">hàm sẵn có trước khi code.</text>
+
+    <rect x="14" y="128" width="184" height="72" rx="8" fill="#020617" stroke="#1e293b" />
+    <text x="24" y="152" fill="#c084fc" font-family="Consolas, monospace" font-size="11">$ vibe-doctor index</text>
+    <text x="24" y="176" fill="#c084fc" font-family="Consolas, monospace" font-size="11">$ vibe-doctor sync-rules</text>
+
+    <text x="16" y="228" fill="#34d399" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">✔ Kết quả sinh ra:</text>
+    <text x="20" y="250" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• .cursor/rules/*.mdc</text>
+    <text x="20" y="270" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• AGENTS.md &amp; CLAUDE.md</text>
+    <text x="20" y="290" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• .vibe-cache.json</text>
+  </g>
+
+  <!-- Step 3 -->
+  <g transform="translate(488, 92)">
+    <rect width="212" height="316" rx="12" fill="#0f172a" stroke="#f59e0b" stroke-width="1.4" />
+    <rect x="16" y="16" width="96" height="24" rx="12" fill="#78350f" />
+    <text x="64" y="32" text-anchor="middle" fill="#fde68a" font-family="Inter, Segoe UI, sans-serif" font-size="11" font-weight="700">BƯỚC 3 · GIÁM SÁT</text>
+    <text x="16" y="66" fill="#f1f5f9" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700">Watch &amp; Kiểm toán</text>
+    <text x="16" y="90" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">Quét tức thì AST (&lt;300ms)</text>
+    <text x="16" y="108" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">hoặc bật thêm AI Tầng 2.</text>
+
+    <rect x="14" y="128" width="184" height="72" rx="8" fill="#020617" stroke="#1e293b" />
+    <text x="24" y="150" fill="#fbbf24" font-family="Consolas, monospace" font-size="11">$ vibe-doctor watch</text>
+    <text x="24" y="170" fill="#fbbf24" font-family="Consolas, monospace" font-size="11">$ vibe-doctor audit \</text>
+    <text x="32" y="188" fill="#fde68a" font-family="Consolas, monospace" font-size="11">--semantic</text>
+
+    <text x="16" y="228" fill="#34d399" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">✔ Bắt trọn 6 nhóm lỗi:</text>
+    <text x="20" y="250" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• Xuyên tầng &amp; Vòng lặp</text>
+    <text x="20" y="270" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• Lộ Secret &amp; Package lạ</text>
+    <text x="20" y="290" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• Trùng hàm &amp; Lệch PRD</text>
+  </g>
+
+  <!-- Step 4 -->
+  <g transform="translate(718, 92)">
+    <rect width="214" height="316" rx="12" fill="#0f172a" stroke="#10b981" stroke-width="1.4" />
+    <rect x="16" y="16" width="96" height="24" rx="12" fill="#064e3b" />
+    <text x="64" y="32" text-anchor="middle" fill="#6ee7b7" font-family="Inter, Segoe UI, sans-serif" font-size="11" font-weight="700">BƯỚC 4 · CHỮA LÀNH</text>
+    <text x="16" y="66" fill="#f1f5f9" font-family="Inter, Segoe UI, sans-serif" font-size="15" font-weight="700">Fix-Prompt &amp; MCP</text>
+    <text x="16" y="90" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">Xem đồ thị HTML hoặc để</text>
+    <text x="16" y="108" fill="#94a3b8" font-family="Inter, Segoe UI, sans-serif" font-size="12">MCP Agent tự sửa khép kín.</text>
+
+    <rect x="14" y="128" width="186" height="72" rx="8" fill="#020617" stroke="#1e293b" />
+    <text x="24" y="152" fill="#34d399" font-family="Consolas, monospace" font-size="11">$ vibe-doctor report</text>
+    <text x="24" y="176" fill="#34d399" font-family="Consolas, monospace" font-size="11">$ vibe-doctor mcp</text>
+
+    <text x="16" y="228" fill="#34d399" font-family="Inter, Segoe UI, sans-serif" font-size="12" font-weight="600">✔ Đầu ra trực quan:</text>
+    <text x="20" y="250" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• vibe-report.html (SVG)</text>
+    <text x="20" y="270" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• Nút Copy Fix-Prompt</text>
+    <text x="20" y="290" fill="#cbd5e1" font-family="Consolas, monospace" font-size="11">• 3 MCP Tools tự động</text>
+  </g>
+</svg>
