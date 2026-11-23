@@ -67,7 +67,7 @@ export function registerMcpCommand(program: Command, runAuditFn: typeof RunAudit
     .action(async (dir: string) => {
       await startMcpStdioServer({
         defaultProjectRoot: path.resolve(dir),
-        serverVersion: '1.4.0',
+        serverVersion: '1.4.1',
         runAuditFn,
       });
     });

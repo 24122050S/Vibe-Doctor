@@ -44,6 +44,7 @@ export const AiEvalConfigSchema = z
     check_prd_compliance: z.boolean().default(true),
     prd_path: z.string().default('PRD.md'),
     similarity_threshold: z.number().min(0).max(1).default(0.8),
+    max_ai_checks: z.number().int().positive().default(15),
     timeout_ms: z.number().int().positive().default(15000),
   })
   .default({
@@ -53,6 +54,7 @@ export const AiEvalConfigSchema = z
     check_prd_compliance: true,
     prd_path: 'PRD.md',
     similarity_threshold: 0.8,
+    max_ai_checks: 15,
     timeout_ms: 15000,
   });
 

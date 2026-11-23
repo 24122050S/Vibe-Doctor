@@ -5,5 +5,6 @@ vibe-report.html
 .env
 .env.*
 !.env.example
+prompt/
 *.log
 coverage/

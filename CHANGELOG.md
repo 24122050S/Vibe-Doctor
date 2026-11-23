@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ---
 
+## [1.4.1] - 2026-11-23
+
+### Added
+- **Inline Suppression Annotations:** Support `// vibe-doctor-ignore-next-line` and `// vibe-ignore` comments for controlled, intentional architectural exceptions.
+- **Engineering Architecture Specification:** Added [`docs/ARCHITECTURE_SPEC.md`](./docs/ARCHITECTURE_SPEC.md).
+
+### Improved
+- **AST Scan Throughput (3x–5x faster at scale):** Added per-`SourceFile` `WeakMap` import caching and pre-compiled `picomatch` glob matchers so each file's AST is traversed only once across all rules.
+- **Transitive `--staged` Circular Dependency Detection:** Lazily expands reachable unstaged neighbor modules during `git commit` so cycles formed between staged and unstaged files are caught immediately.
+- **Tier 2 AI Quota & Latency Optimization:** Added symmetric function-pair deduplication and `max_ai_checks` guard (`default: 15`) to prevent redundant LLM API calls on large repositories.
+
+---
+
 ## [1.4.0] - 2026-11-23
 
 ### Added

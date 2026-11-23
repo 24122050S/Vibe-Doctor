@@ -14,6 +14,7 @@ import { checkDependencies } from './ast/rules/depsCheck.js';
 import { checkFileAndFunctionSizes } from './ast/rules/fileSize.js';
 import { checkLayerBoundaries } from './ast/rules/layerBoundary.js';
 import { checkHardcodedSecrets } from './ast/rules/secretLeak.js';
+import { filterSuppressedIssues, getSuppressedLines } from './ast/suppression.js';
 import { buildCliProgram } from './cli.js';
 import { loadArchRules } from './config/loader.js';
 import { AuditIssue, AuditReport, FunctionSignatureEntry } from './types.js';
@@ -36,6 +37,7 @@ export {
 } from './reporters/ruleSync.js';
 export { searchIndexedFunctions } from './ast/functionSearch.js';
 export { checkHardcodedSecrets, maskSecretValue } from './ast/rules/secretLeak.js';
+export { filterSuppressedIssues, getSuppressedLines } from './ast/suppression.js';
 export { startProjectWatcher, shouldTriggerOnWatchPath } from './utils/watcher.js';
 export {
   handleMcpJsonRpcMessage,
@@ -175,7 +177,10 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
 
   const { issues: layerIssues, edges } = checkLayerBoundaries(projectRoot, sourceFiles, config, aliasConfig);
   const circularIssues = config.thresholds.detect_circular_dependencies
-    ? checkCircularDependencies(projectRoot, sourceFiles, aliasConfig, edges)
+    ? checkCircularDependencies(projectRoot, sourceFiles, aliasConfig, edges, {
+        project,
+        expandUnstagedNeighbors: collected.mode === 'staged',
+      })
     : [];
   const secretIssues = config.thresholds.detect_hardcoded_secrets
     ? checkHardcodedSecrets(sourceFiles)
@@ -187,13 +192,10 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
     checkPackageJson: checkPkgJson,
   });
 
-  const astIssues: AuditIssue[] = [
-    ...layerIssues,
-    ...circularIssues,
-    ...secretIssues,
-    ...sizeIssues,
-    ...depIssues,
-  ];
+  const astIssues: AuditIssue[] = filterSuppressedIssues(
+    [...layerIssues, ...circularIssues, ...secretIssues, ...sizeIssues, ...depIssues],
+    sourceFiles
+  );
   const astDurationMs = performance.now() - astStart;
   const hasAstCritical = astIssues.some((i) => i.severity === 'critical');
 
@@ -207,7 +209,10 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
     options,
   });
 
-  const allIssues = [...astIssues, ...tier2.issues];
+  const allIssues = [
+    ...astIssues,
+    ...filterSuppressedIssues(tier2.issues, sourceFiles),
+  ];
   const hasCritical = allIssues.some((i) => i.severity === 'critical');
   const hasWarning = allIssues.some((i) => i.severity === 'warning');
 

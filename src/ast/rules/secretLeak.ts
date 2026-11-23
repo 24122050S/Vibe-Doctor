@@ -64,6 +64,9 @@ function detectSecretKind(literalValue: string, parentNode: Node | undefined): s
   return null;
 }
 
+const FAST_PREFILTER_REGEX =
+  /(?:AIza|sk-|rk_live_|gh[pousr]_|github_pat_|AKIA|xox[baprs]-|PRIVATE KEY|:\/\/|secret|api[_-]?key|password)/i;
+
 /**
  * Scans AST string & template literals for hardcoded API keys, tokens, private keys, and DB credentials.
  * Ignores `process.env.*` references and obvious test/example placeholders.
@@ -72,6 +75,11 @@ export function checkHardcodedSecrets(sourceFiles: Map<string, SourceFile>): Aud
   const issues: AuditIssue[] = [];
 
   for (const [relPosixPath, sourceFile] of sourceFiles.entries()) {
+    // Fast lexical pre-screen skips expensive AST node wrapping on clean files
+    if (!FAST_PREFILTER_REGEX.test(sourceFile.getFullText())) {
+      continue;
+    }
+
     const stringNodes = [
       ...sourceFile.getDescendantsOfKind(SyntaxKind.StringLiteral),
       ...sourceFile.getDescendantsOfKind(SyntaxKind.NoSubstitutionTemplateLiteral),

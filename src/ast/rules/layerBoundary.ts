@@ -18,6 +18,16 @@ interface CompiledLayer {
 }
 
 const STRIP_EXT_REGEX = /\.(ts|tsx|js|jsx|mts|cts|mjs|cjs)$/i;
+const archMatcherCache = new Map<string, (input: string) => boolean>();
+
+function getCompiledArchMatcher(pattern: string): (input: string) => boolean {
+  let matcher = archMatcherCache.get(pattern);
+  if (!matcher) {
+    matcher = picomatch(pattern, { dot: true });
+    archMatcherCache.set(pattern, matcher);
+  }
+  return matcher;
+}
 
 /**
  * Matches an internal resolved POSIX path (which may be a file like `src/db/client.ts`,
@@ -42,7 +52,7 @@ export function matchesArchPattern(targetPosixPath: string, pattern: string): bo
     }
   }
 
-  const isMatch = picomatch(cleanPattern, { dot: true });
+  const isMatch = getCompiledArchMatcher(cleanPattern);
   return (
     isMatch(cleanTarget) ||
     isMatch(strippedTarget) ||

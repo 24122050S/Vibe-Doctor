@@ -18,8 +18,7 @@ export const SemanticDuplicateSchema = z.object({
 
 /**
  * Evaluates newly added or modified functions against the codebase's existing function index
- * using Top-5 candidate pre-filtering + LLM Semantic Judge.
- * Never throws on network/API errors — gracefully falls back to partial/empty results.
+ * using Top-5 candidate pre-filtering, symmetric pair deduplication, and `max_ai_checks` quota guard.
  */
 export async function checkSemanticDuplication(
   targetFunctions: FunctionSignatureEntry[],
@@ -29,14 +28,34 @@ export async function checkSemanticDuplication(
 ): Promise<AuditIssue[]> {
   const issues: AuditIssue[] = [];
   const threshold = aiConfig.similarity_threshold;
+  const maxChecks = aiConfig.max_ai_checks ?? 15;
+  const evaluatedPairs = new Set<string>();
+  let apiCallsCount = 0;
 
   for (const targetFn of targetFunctions) {
-    const candidates = findTopCandidateFunctions(targetFn, indexEntries, 5);
+    if (apiCallsCount >= maxChecks) {
+      logger.debug(`Reached max_ai_checks limit (${maxChecks}); skipping remaining functions.`);
+      break;
+    }
+
+    const rawCandidates = findTopCandidateFunctions(targetFn, indexEntries, 5);
+    // Filter out candidates already evaluated symmetrically against targetFn
+    const candidates = rawCandidates.filter((cand) => {
+      const pairKey = [targetFn.id, cand.id].sort().join('<=>');
+      return !evaluatedPairs.has(pairKey);
+    });
+
     if (candidates.length === 0) {
       continue;
     }
 
+    for (const cand of candidates) {
+      const pairKey = [targetFn.id, cand.id].sort().join('<=>');
+      evaluatedPairs.add(pairKey);
+    }
+
     try {
+      apiCallsCount++;
       const userPrompt = buildSemanticDuplicateUserPrompt(targetFn, candidates);
       const result: SemanticDuplicateResult = await provider.generateJson(
         SEMANTIC_DUPLICATE_SYSTEM_PROMPT,
@@ -71,7 +90,7 @@ export async function checkSemanticDuplication(
           err instanceof Error ? err.message : String(err)
         }). Bỏ qua và tiếp tục với kết quả AST.`
       );
-      break; // Avoid cascading timeouts across remaining functions if network/API is down
+      break;
     }
   }
 

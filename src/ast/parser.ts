@@ -251,10 +251,17 @@ export function resolveSpecifierToProjectPath(
   return null;
 }
 
+const moduleImportsCache = new WeakMap<SourceFile, ExtractedImport[]>();
+
 /**
- * Extracts all static imports, re-exports, dynamic `import()`, and CommonJS `require()` from a SourceFile.
+ * Extracts all static imports, re-exports, dynamic `import()`, and CommonJS `require()` from a SourceFile (cached per SourceFile).
  */
 export function extractModuleImports(sourceFile: SourceFile): ExtractedImport[] {
+  const cached = moduleImportsCache.get(sourceFile);
+  if (cached) {
+    return cached;
+  }
+
   const results: ExtractedImport[] = [];
 
   // 1. Static import declarations: import { x } from 'y'
@@ -284,30 +291,33 @@ export function extractModuleImports(sourceFile: SourceFile): ExtractedImport[] 
     });
   }
 
-  // 3. Dynamic import('y') and require('y')
-  const callExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression);
-  for (const callExpr of callExpressions) {
-    const expr = callExpr.getExpression();
-    const isDynamicImport = expr.getKind() === SyntaxKind.ImportKeyword;
-    const isRequire = expr.getKind() === SyntaxKind.Identifier && expr.getText() === 'require';
+  // 3. Dynamic import('y') and require('y') — fast-path skip if neither token exists in file text
+  if (/\b(?:import|require)\s*\(/.test(sourceFile.getFullText())) {
+    const callExpressions = sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression);
+    for (const callExpr of callExpressions) {
+      const expr = callExpr.getExpression();
+      const isDynamicImport = expr.getKind() === SyntaxKind.ImportKeyword;
+      const isRequire = expr.getKind() === SyntaxKind.Identifier && expr.getText() === 'require';
 
-    if (!isDynamicImport && !isRequire) {
-      continue;
-    }
+      if (!isDynamicImport && !isRequire) {
+        continue;
+      }
 
-    const firstArg = callExpr.getArguments()[0];
-    if (firstArg && firstArg.getKind() === SyntaxKind.StringLiteral) {
-      const specifier = firstArg.getText().slice(1, -1);
-      const pos = sourceFile.getLineAndColumnAtPos(callExpr.getStart());
-      results.push({
-        specifier,
-        line: pos.line,
-        column: pos.column,
-        snippet: callExpr.getText().split(/\r?\n/)[0].trim(),
-        isTypeOnly: false,
-      });
+      const firstArg = callExpr.getArguments()[0];
+      if (firstArg && firstArg.getKind() === SyntaxKind.StringLiteral) {
+        const specifier = firstArg.getText().slice(1, -1);
+        const pos = sourceFile.getLineAndColumnAtPos(callExpr.getStart());
+        results.push({
+          specifier,
+          line: pos.line,
+          column: pos.column,
+          snippet: callExpr.getText().split(/\r?\n/)[0].trim(),
+          isTypeOnly: false,
+        });
+      }
     }
   }
 
+  moduleImportsCache.set(sourceFile, results);
   return results;
 }

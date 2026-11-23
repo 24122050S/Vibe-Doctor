@@ -103,7 +103,7 @@ export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
   const program = new Command()
     .name('vibe-doctor')
     .description('🩺 AI Codebase Governance & Architecture Guardrail CLI')
-    .version('1.4.0');
+    .version('1.4.1');
 
   program
     .command('audit', { isDefault: true })

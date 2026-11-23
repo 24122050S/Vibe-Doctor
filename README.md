@@ -308,4 +308,4 @@ npm run build && node bin/vibe-doctor.js audit --strict --no-ai
 
 ## 📄 Giấy phép (License)
 
-Phát hành theo giấy phép **MIT License**.
+Phát hành theo giấy phép **MIT License**. Xem thêm tài liệu thiết kế chi tiết tại [`docs/ARCHITECTURE_SPEC.md`](./docs/ARCHITECTURE_SPEC.md) và lịch sử phiên bản tại [`CHANGELOG.md`](./CHANGELOG.md).

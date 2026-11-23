@@ -63,7 +63,7 @@ export async function handleMcpJsonRpcMessage(
         },
         serverInfo: {
           name: 'vibe-doctor',
-          version: ctx.serverVersion ?? '1.4.0',
+          version: ctx.serverVersion ?? '1.4.1',
         },
       },
     };

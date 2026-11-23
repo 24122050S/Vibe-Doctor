@@ -653,4 +653,60 @@ describe('vibe-doctor — Init, Git Staged Mode & HTML Dependency Graph Report',
     expect(shouldTriggerOnWatchPath('node_modules/pkg/index.js')).toBe(false);
     expect(shouldTriggerOnWatchPath('vibe-report.html')).toBe(false);
   });
+
+  it('catches circular dependencies in --staged mode against unstaged neighbors and honors // vibe-doctor-ignore-next-line', async () => {
+    const root = createTempProject();
+    execFileSync('git', ['init'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['config', 'user.email', 'dev@example.com'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['config', 'user.name', 'Dev'], { cwd: root, stdio: 'ignore' });
+
+    writeProjectFile(root, '.archrules.yaml', SAMPLE_ARCHRULES);
+    writeProjectFile(root, 'src/db/index.ts', `export const prisma = {};\n`);
+    writeProjectFile(
+      root,
+      'src/services/unstagedA.ts',
+      `import { fnB } from './stagedB';\nexport const fnA = () => fnB;\n`
+    );
+    writeProjectFile(
+      root,
+      'src/services/stagedB.ts',
+      `export const fnB = () => 42;\n`
+    );
+
+    // Commit initial clean state so unstagedA.ts is committed & unstaged
+    execFileSync('git', ['add', '.'], { cwd: root, stdio: 'ignore' });
+    execFileSync('git', ['commit', '-m', 'init'], { cwd: root, stdio: 'ignore' });
+
+    // Now modify ONLY stagedB.ts to introduce cycle stagedB -> unstagedA -> stagedB,
+    // plus add a suppressed UI -> DB import in AdminSeed.tsx
+    writeProjectFile(
+      root,
+      'src/services/stagedB.ts',
+      `import { fnA } from './unstagedA';\nexport const fnB = () => fnA;\n`
+    );
+    writeProjectFile(
+      root,
+      'src/components/AdminSeed.tsx',
+      [
+        `// vibe-doctor-ignore-next-line`,
+        `import { prisma } from '@/db';`,
+        `export const AdminSeed = () => prisma;`,
+      ].join('\n')
+    );
+
+    execFileSync('git', ['add', 'src/services/stagedB.ts', 'src/components/AdminSeed.tsx'], {
+      cwd: root,
+      stdio: 'ignore',
+    });
+
+    const report = await runAudit({ projectRoot: root, staged: true, ai: false });
+
+    // Suppressed layer-boundary import in AdminSeed.tsx must NOT be flagged
+    expect(report.issues.filter((i) => i.ruleId === 'layer-boundary')).toHaveLength(0);
+
+    // Transitive cycle involving unstagedA.ts MUST be caught on stagedB.ts!
+    const cycleIssues = report.issues.filter((i) => i.ruleId === 'circular-dependency');
+    expect(cycleIssues).toHaveLength(1);
+    expect(cycleIssues[0].file).toBe('src/services/stagedB.ts');
+  });
 });

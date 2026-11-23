@@ -1,4 +1,6 @@
-import { SourceFile } from 'ts-morph';
+import fs from 'node:fs';
+import path from 'node:path';
+import { Project, SourceFile } from 'ts-morph';
 import { AuditIssue, DependencyEdge } from '../../types.js';
 import {
   extractModuleImports,
@@ -16,49 +18,81 @@ interface OutgoingImportEdge {
 
 const CANDIDATE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.cts', '.mjs', '.cjs'];
 
-/**
- * Maps an extensionless or directory-level internal path (e.g. `src/services/user` or `src/db`)
- * to the exact canonical relative POSIX key inside `knownFiles` (e.g. `src/services/user.ts` or `src/db/index.ts`).
- */
-function resolveToKnownSourceFile(
+function resolveToKnownOrDiskFile(
+  projectRoot: string,
   resolvedPath: string,
-  knownFiles: Set<string>
+  knownFiles: Set<string>,
+  allowDiskLookup: boolean
 ): string | null {
   const clean = resolvedPath.replace(/^\.\//, '').replace(/\/+$/, '');
-  if (knownFiles.has(clean)) {
-    return clean;
-  }
+  if (knownFiles.has(clean)) return clean;
 
   for (const ext of CANDIDATE_EXTENSIONS) {
     const withExt = `${clean}${ext}`;
-    if (knownFiles.has(withExt)) {
-      return withExt;
-    }
+    if (knownFiles.has(withExt)) return withExt;
   }
 
   for (const ext of CANDIDATE_EXTENSIONS) {
     const indexCandidate = `${clean}/index${ext}`;
-    if (knownFiles.has(indexCandidate)) {
-      return indexCandidate;
-    }
+    if (knownFiles.has(indexCandidate)) return indexCandidate;
+  }
+
+  if (!allowDiskLookup) return null;
+
+  if (fs.existsSync(path.join(projectRoot, clean)) && fs.statSync(path.join(projectRoot, clean)).isFile()) {
+    return clean;
+  }
+  for (const ext of CANDIDATE_EXTENSIONS) {
+    const withExt = `${clean}${ext}`;
+    if (fs.existsSync(path.join(projectRoot, withExt))) return withExt;
+  }
+  for (const ext of CANDIDATE_EXTENSIONS) {
+    const indexCandidate = `${clean}/index${ext}`;
+    if (fs.existsSync(path.join(projectRoot, indexCandidate))) return indexCandidate;
   }
 
   return null;
 }
 
 /**
- * Rotates a cycle node array `[n0, n1, ..., nk-1]` so the lexicographically smallest file comes first,
- * producing a unique canonical key for deduplicating identical cycles discovered from different entry nodes.
+ * Lazily expands `workingFiles` along outgoing imports from `seedFiles` on disk
+ * so `--staged` pre-commit audits detect cycles involving unstaged neighbor modules!
  */
-function canonicalizeCycleNodes(cycleNodes: string[]): string[] {
-  if (cycleNodes.length <= 1) return cycleNodes;
-  let minIdx = 0;
-  for (let i = 1; i < cycleNodes.length; i++) {
-    if (cycleNodes[i].localeCompare(cycleNodes[minIdx]) < 0) {
-      minIdx = i;
+function expandReachableSourceFiles(
+  projectRoot: string,
+  project: Project,
+  seedFiles: Map<string, SourceFile>,
+  aliasConfig: PathAliasConfig
+): Map<string, SourceFile> {
+  const working = new Map<string, SourceFile>(seedFiles);
+  const known = new Set<string>(working.keys());
+  const queue: string[] = Array.from(seedFiles.keys());
+
+  while (queue.length > 0) {
+    const currentFile = queue.shift()!;
+    const sf = working.get(currentFile);
+    if (!sf) continue;
+
+    for (const imp of extractModuleImports(sf)) {
+      if (imp.isTypeOnly) continue;
+      const rawResolved = resolveSpecifierToProjectPath(projectRoot, currentFile, imp.specifier, aliasConfig);
+      if (!rawResolved) continue;
+
+      const targetRel = resolveToKnownOrDiskFile(projectRoot, rawResolved, known, true);
+      if (!targetRel || working.has(targetRel)) continue;
+
+      try {
+        const addedSf = project.addSourceFileAtPath(path.join(projectRoot, targetRel));
+        working.set(targetRel, addedSf);
+        known.add(targetRel);
+        queue.push(targetRel);
+      } catch {
+        // Ignore unreadable neighbor files
+      }
     }
   }
-  return [...cycleNodes.slice(minIdx), ...cycleNodes.slice(0, minIdx)];
+
+  return working;
 }
 
 function buildRuntimeAdjacencyGraph(
@@ -73,15 +107,10 @@ function buildRuntimeAdjacencyGraph(
     const outgoing: OutgoingImportEdge[] = [];
     for (const imp of extractModuleImports(sf)) {
       if (imp.isTypeOnly) continue;
-      const rawResolved = resolveSpecifierToProjectPath(
-        projectRoot,
-        fromFile,
-        imp.specifier,
-        aliasConfig
-      );
+      const rawResolved = resolveSpecifierToProjectPath(projectRoot, fromFile, imp.specifier, aliasConfig);
       if (!rawResolved) continue;
 
-      const targetFile = resolveToKnownSourceFile(rawResolved, knownFiles);
+      const targetFile = resolveToKnownOrDiskFile(projectRoot, rawResolved, knownFiles, false);
       if (!targetFile || targetFile === fromFile) continue;
 
       outgoing.push({
@@ -98,24 +127,43 @@ function buildRuntimeAdjacencyGraph(
   return adjacency;
 }
 
+function canonicalizeCycleNodes(cycleNodes: string[]): string[] {
+  if (cycleNodes.length <= 1) return cycleNodes;
+  let minIdx = 0;
+  for (let i = 1; i < cycleNodes.length; i++) {
+    if (cycleNodes[i].localeCompare(cycleNodes[minIdx]) < 0) {
+      minIdx = i;
+    }
+  }
+  return [...cycleNodes.slice(minIdx), ...cycleNodes.slice(0, minIdx)];
+}
+
+export interface CircularCheckOptions {
+  project?: Project;
+  expandUnstagedNeighbors?: boolean;
+}
+
 /**
- * Detects runtime circular dependencies (`A -> B -> ... -> A`) across scanned `sourceFiles` using DFS.
- * Ignores TypeScript `import type` statements since they are erased at compile time.
- * Also marks participating `DependencyEdge` items as `violated = true` for HTML graph visualization.
+ * Detects runtime circular dependencies (`A -> B -> ... -> A`) using DFS.
  */
 export function checkCircularDependencies(
   projectRoot: string,
   sourceFiles: Map<string, SourceFile>,
   aliasConfig: PathAliasConfig,
-  edges?: DependencyEdge[]
+  edges?: DependencyEdge[],
+  options: CircularCheckOptions = {}
 ): AuditIssue[] {
-  const knownFiles = new Set<string>(sourceFiles.keys());
-  const adjacency = buildRuntimeAdjacencyGraph(projectRoot, sourceFiles, knownFiles, aliasConfig);
+  const stagedSeeds = new Set<string>(sourceFiles.keys());
+  const graphFiles =
+    options.expandUnstagedNeighbors && options.project
+      ? expandReachableSourceFiles(projectRoot, options.project, sourceFiles, aliasConfig)
+      : sourceFiles;
 
-  // Visit states: 0 = unvisited, 1 = visiting (on current recursion stack), 2 = completely explored
+  const knownFiles = new Set<string>(graphFiles.keys());
+  const adjacency = buildRuntimeAdjacencyGraph(projectRoot, graphFiles, knownFiles, aliasConfig);
+
   const state = new Map<string, 0 | 1 | 2>();
   const stackNodes: string[] = [];
-  const stackEdges: OutgoingImportEdge[] = [];
   const seenCycles = new Set<string>();
   const cyclePairs = new Set<string>();
   const issues: AuditIssue[] = [];
@@ -124,49 +172,50 @@ export function checkCircularDependencies(
     state.set(node, 1);
     stackNodes.push(node);
 
-    const neighbors = adjacency.get(node) ?? [];
-    for (const edge of neighbors) {
+    for (const edge of adjacency.get(node) ?? []) {
       const nextState = state.get(edge.toFile) ?? 0;
-
       if (nextState === 0) {
-        stackEdges.push(edge);
         dfs(edge.toFile);
-        stackEdges.pop();
       } else if (nextState === 1) {
         const cycleStartIdx = stackNodes.indexOf(edge.toFile);
-        if (cycleStartIdx !== -1) {
-          const rawCycle = stackNodes.slice(cycleStartIdx);
-          const canonical = canonicalizeCycleNodes(rawCycle);
-          const cycleKey = canonical.join(' -> ');
+        if (cycleStartIdx === -1) continue;
 
-          if (!seenCycles.has(cycleKey)) {
-            seenCycles.add(cycleKey);
-            const fullChain = [...canonical, canonical[0]].join(' -> ');
-
-            // Record every directed hop in the cycle so HTML Dependency Graph highlights the loop
-            for (let i = 0; i < canonical.length; i++) {
-              const u = canonical[i];
-              const v = canonical[(i + 1) % canonical.length];
-              cyclePairs.add(`${u}=>${v}`);
-            }
-
-            issues.push({
-              tier: 'ast',
-              ruleId: 'circular-dependency',
-              severity: 'critical',
-              file: node,
-              line: edge.line,
-              column: edge.column,
-              message: `Phát hiện vòng lặp phụ thuộc (Circular Dependency): ${fullChain}`,
-              snippet: edge.snippet,
-              suggestion: `Phá vỡ chu trình '${fullChain}' bằng cách tách phần dùng chung sang module độc lập (ví dụ types/shared helper), chuyển sang 'import type' nếu chỉ dùng kiểu TypeScript, hoặc đảo chiều phụ thuộc qua Dependency Injection.`,
-              metadata: {
-                cycle: [...canonical, canonical[0]],
-                closingImportSpecifier: edge.specifier,
-              },
-            });
-          }
+        const rawCycle = stackNodes.slice(cycleStartIdx);
+        if (options.expandUnstagedNeighbors && !rawCycle.some((f) => stagedSeeds.has(f))) {
+          continue;
         }
+
+        const canonical = canonicalizeCycleNodes(rawCycle);
+        const cycleKey = canonical.join(' -> ');
+        if (seenCycles.has(cycleKey)) continue;
+        seenCycles.add(cycleKey);
+
+        const fullChain = [...canonical, canonical[0]].join(' -> ');
+        for (let i = 0; i < canonical.length; i++) {
+          cyclePairs.add(`${canonical[i]}=>${canonical[(i + 1) % canonical.length]}`);
+        }
+
+        // Report on a staged node in the cycle when running in --staged mode
+        const reportFile = stagedSeeds.has(node)
+          ? node
+          : rawCycle.find((f) => stagedSeeds.has(f)) ?? node;
+        const reportEdge =
+          reportFile === node
+            ? edge
+            : (adjacency.get(reportFile) ?? []).find((e) => rawCycle.includes(e.toFile)) ?? edge;
+
+        issues.push({
+          tier: 'ast',
+          ruleId: 'circular-dependency',
+          severity: 'critical',
+          file: reportFile,
+          line: reportEdge.line,
+          column: reportEdge.column,
+          message: `Phát hiện vòng lặp phụ thuộc (Circular Dependency): ${fullChain}`,
+          snippet: reportEdge.snippet,
+          suggestion: `Phá vỡ chu trình '${fullChain}' bằng cách tách phần dùng chung sang module độc lập (ví dụ types/shared helper), chuyển sang 'import type' nếu chỉ dùng kiểu TypeScript, hoặc đảo chiều phụ thuộc.`,
+          metadata: { cycle: [...canonical, canonical[0]], closingImportSpecifier: reportEdge.specifier },
+        });
       }
     }
 
@@ -175,15 +224,12 @@ export function checkCircularDependencies(
   }
 
   for (const file of knownFiles) {
-    if ((state.get(file) ?? 0) === 0) {
-      dfs(file);
-    }
+    if ((state.get(file) ?? 0) === 0) dfs(file);
   }
 
-  // Mark cycle edges as violated in the shared graph edge list for vibe-report.html
   if (edges && cyclePairs.size > 0) {
     for (const graphEdge of edges) {
-      const resolvedDst = resolveToKnownSourceFile(graphEdge.to, knownFiles);
+      const resolvedDst = resolveToKnownOrDiskFile(projectRoot, graphEdge.to, knownFiles, false);
       if (resolvedDst && cyclePairs.has(`${graphEdge.from}=>${resolvedDst}`)) {
         graphEdge.violated = true;
       }

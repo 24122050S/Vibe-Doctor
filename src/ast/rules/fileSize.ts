@@ -46,6 +46,11 @@ export function checkFileAndFunctionSizes(
       });
     }
 
+    // Mathematical fast-path: a file with <= max_function_lines cannot contain a function > max_function_lines
+    if (totalLines <= max_function_lines) {
+      continue;
+    }
+
     const functionNodes = [
       ...sourceFile.getDescendantsOfKind(SyntaxKind.FunctionDeclaration),
       ...sourceFile.getDescendantsOfKind(SyntaxKind.MethodDeclaration),

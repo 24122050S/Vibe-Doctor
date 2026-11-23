@@ -59,12 +59,23 @@ export function extractPackageName(specifier: string): string | null {
   return base;
 }
 
+const pkgMatcherCache = new Map<string, (input: string) => boolean>();
+
+function getCompiledPkgMatcher(pattern: string): (input: string) => boolean {
+  let matcher = pkgMatcherCache.get(pattern);
+  if (!matcher) {
+    matcher = picomatch(pattern);
+    pkgMatcherCache.set(pattern, matcher);
+  }
+  return matcher;
+}
+
 function matchesPackagePatterns(specifier: string, pkgName: string, patterns: string[]): boolean {
   for (const pattern of patterns) {
     if (pattern === pkgName || pattern === specifier) {
       return true;
     }
-    const matcher = picomatch(pattern);
+    const matcher = getCompiledPkgMatcher(pattern);
     if (matcher(pkgName) || matcher(specifier)) {
       return true;
     }
