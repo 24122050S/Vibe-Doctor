@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 560" width="920" height="560">
+  <defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0d1117" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+  </defs>
+
+  <!-- Terminal Window Frame -->
+  <rect x="0" y="0" width="920" height="560" rx="14" fill="url(#bgGrad)" stroke="#30363d" stroke-width="1.5" />
+  <rect x="0" y="0" width="920" height="40" rx="14" fill="#161b22" />
+  <rect x="0" y="26" width="920" height="14" fill="#161b22" />
+  <line x1="0" y1="40" x2="920" y2="40" stroke="#30363d" stroke-width="1" />
+
+  <!-- Window Traffic Lights -->
+  <circle cx="22" cy="20" r="6" fill="#ff5f56" />
+  <circle cx="42" cy="20" r="6" fill="#ffbd2e" />
+  <circle cx="62" cy="20" r="6" fill="#27c93f" />
+  <text x="460" y="25" text-anchor="middle" fill="#8b949e" font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="13">
+    vibe-doctor — npx vibe-doctor audit --staged
+  </text>
+
+  <!-- Terminal Content -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+    <text x="24" y="70" fill="#58a6ff">$ npx vibe-doctor audit examples/nextjs-shop</text>
+
+    <text x="24" y="98" fill="#484f58">──────────────────────────────────────────────────────────────────────────────────────────</text>
+    <text x="24" y="118" fill="#38bdf8" font-weight="700">🩺 VIBE DOCTOR <tspan fill="#8b949e" font-weight="400">— AI Codebase Governance &amp; Architecture Guardrail</tspan></text>
+    <text x="24" y="136" fill="#484f58">──────────────────────────────────────────────────────────────────────────────────────────</text>
+
+    <text x="32" y="158" fill="#8b949e">Chế độ quét:   <tspan fill="#60a5fa">Full Project Scan</tspan> <tspan fill="#e6edf3">(8 files)</tspan></text>
+    <text x="32" y="178" fill="#8b949e">Hiệu năng:     AST <tspan fill="#34d399" font-weight="700">52.4ms</tspan> | AI <tspan fill="#c084fc">412ms (gemini-2.5-flash)</tspan> | Tổng <tspan fill="#e6edf3">464.4ms</tspan></text>
+    <text x="24" y="196" fill="#484f58">──────────────────────────────────────────────────────────────────────────────────────────</text>
+
+    <!-- Issue 1 -->
+    <rect x="32" y="210" width="82" height="20" rx="4" fill="#ef4444" />
+    <text x="73" y="224" text-anchor="middle" fill="#ffffff" font-weight="700" font-size="11">CRITICAL</text>
+    <text x="124" y="224" fill="#38bdf8">[Tầng 1: AST]</text>
+    <text x="236" y="224" fill="#e6edf3" font-weight="700" text-decoration="underline">src/components/Checkout.tsx:4</text>
+    <text x="485" y="224" fill="#8b949e">(layer-boundary)</text>
+    <text x="48" y="245" fill="#e6edf3">Vi phạm ranh giới kiến trúc: tầng 'ui' import trực tiếp tầng 'db' qua '@/db'.</text>
+    <text x="48" y="264" fill="#8b949e">Code: <tspan fill="#f87171">import { prisma } from '@/db';</tspan></text>
+    <text x="48" y="283" fill="#34d399">💡 Gợi ý: <tspan fill="#67e8f9">Chuyển logic DB sang tầng Service ('src/services/orderService.ts').</tspan></text>
+
+    <!-- Issue 2 -->
+    <rect x="32" y="302" width="82" height="20" rx="4" fill="#f59e0b" />
+    <text x="73" y="316" text-anchor="middle" fill="#0d1117" font-weight="700" font-size="11">WARNING</text>
+    <text x="124" y="316" fill="#c084fc">[Tầng 2: AI ]</text>
+    <text x="236" y="316" fill="#e6edf3" font-weight="700" text-decoration="underline">src/components/Checkout.tsx:11</text>
+    <text x="492" y="316" fill="#8b949e">(semantic-duplicate)</text>
+    <text x="48" y="337" fill="#e6edf3">Phát hiện hàm trùng lặp ngữ nghĩa 'formatPrice' (tương đồng 94% với 'src/utils/currency.ts::formatVND').</text>
+    <text x="48" y="356" fill="#34d399">💡 Gợi ý: <tspan fill="#67e8f9">Xóa hàm 'formatPrice' và tái sử dụng 'formatVND' từ '@/utils/currency'.</tspan></text>
+
+    <!-- Auto Fix Prompt Box -->
+    <rect x="28" y="378" width="490" height="22" rx="4" fill="#9333ea" />
+    <text x="38" y="393" fill="#ffffff" font-weight="700" font-size="12">🤖 AUTO FIX-PROMPT (Copy &amp; dán vào Cursor / Claude / Antigravity)</text>
+
+    <rect x="28" y="404" width="864" height="96" rx="6" fill="#130d21" stroke="#9333ea" stroke-width="1.2" />
+    <text x="42" y="426" fill="#f3e8ff">Gửi AI Agent: Trong file `Checkout.tsx` (`src/components/Checkout.tsx`), phát hiện</text>
+    <text x="42" y="446" fill="#f3e8ff">[layer-boundary] tại dòng 4 (`import { prisma } from '@/db'`) và [semantic-duplicate]</text>
+    <text x="42" y="466" fill="#f3e8ff">tại dòng 11 (`formatPrice`). Hãy chuyển logic DB sang `orderService.ts` và tái sử</text>
+    <text x="42" y="486" fill="#f3e8ff">dụng hàm `formatVND` từ `@/utils/currency`, sau đó chạy lại `npx vibe-doctor audit`.</text>
+
+    <!-- Footer Blocked Badge -->
+    <rect x="28" y="516" width="142" height="24" rx="4" fill="#dc2626" />
+    <text x="99" y="532" text-anchor="middle" fill="#ffffff" font-weight="700" font-size="12">✖ COMMIT BLOCKED</text>
+    <text x="180" y="532" fill="#f87171">Vui lòng khắc phục các lỗi kiến trúc CRITICAL bên trên trước khi commit.</text>
+  </g>
+</svg>
