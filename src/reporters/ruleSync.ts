@@ -64,9 +64,14 @@ function renderCoreGuardrailsMarkdown(
 
   lines.push(
     '',
-    '### 2. Clean Code Size Thresholds',
+    '### 2. Clean Code & Module Graph Rules',
     `- **Max lines per file:** \`${config.thresholds.max_file_lines}\` lines. Split large modules into focused sub-modules.`,
-    `- **Max lines per function:** \`${config.thresholds.max_function_lines}\` lines. Extract small, single-purpose helpers.`
+    `- **Max lines per function:** \`${config.thresholds.max_function_lines}\` lines. Extract small, single-purpose helpers.`,
+    ...(config.thresholds.detect_circular_dependencies
+      ? [
+          '- **Zero Circular Dependencies:** Never introduce runtime import cycles (`A -> B -> A`). Extract shared types/contracts into dedicated leaf modules or use `import type`.',
+        ]
+      : [])
   );
 
   const allowedDeps = getAllowedDependencyPatterns(config.dependencies);

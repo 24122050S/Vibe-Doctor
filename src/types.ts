@@ -2,6 +2,7 @@ export type IssueSeverity = 'critical' | 'warning' | 'info';
 export type IssueTier = 'ast' | 'ai';
 export type IssueRuleId =
   | 'layer-boundary'
+  | 'circular-dependency'
   | 'file-size'
   | 'function-size'
   | 'unapproved-dependency'

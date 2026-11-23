@@ -1,37 +1,43 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {
+  ArchPresetName,
+  AVAILABLE_PRESETS,
+  getArchRulesPresetYaml,
+  isValidPresetName,
+} from '../config/presets.js';
 import { isGitRepository } from './git.js';
 
 export interface InitProjectResult {
   archRulesPath: string;
   createdArchRules: boolean;
+  preset: ArchPresetName;
   hookPath?: string;
   installedHook: boolean;
 }
 
 /**
- * Scaffolds `.archrules.yaml` and installs Git pre-commit guardrail hook (Husky or `.git/hooks/pre-commit`).
+ * Scaffolds `.archrules.yaml` from the selected framework preset and installs Git pre-commit hook.
  */
 export function initProject(
   projectRoot: string,
-  options: { force?: boolean; installHook?: boolean } = {}
+  options: { force?: boolean; installHook?: boolean; preset?: string } = {}
 ): InitProjectResult {
   const resolvedRoot = path.resolve(projectRoot);
+  const presetInput = (options.preset ?? 'nextjs').trim().toLowerCase();
+
+  if (!isValidPresetName(presetInput)) {
+    throw new Error(
+      `Preset không hợp lệ: '${options.preset}'. Các preset hỗ trợ: ${AVAILABLE_PRESETS.join(', ')}`
+    );
+  }
+
   const targetArchRules = path.join(resolvedRoot, '.archrules.yaml');
   let createdArchRules = false;
 
   if (!fs.existsSync(targetArchRules) || options.force) {
-    const currentFileDir = path.dirname(fileURLToPath(import.meta.url));
-    const templateCandidates = [
-      path.resolve(currentFileDir, '../../templates/.archrules.yaml'),
-      path.resolve(currentFileDir, '../templates/.archrules.yaml'),
-    ];
-    const templatePath = templateCandidates.find((p) => fs.existsSync(p));
-    if (!templatePath) {
-      throw new Error('Could not locate templates/.archrules.yaml');
-    }
-    fs.copyFileSync(templatePath, targetArchRules);
+    fs.mkdirSync(resolvedRoot, { recursive: true });
+    fs.writeFileSync(targetArchRules, getArchRulesPresetYaml(presetInput), 'utf-8');
     createdArchRules = true;
   }
 
@@ -70,5 +76,11 @@ export function initProject(
     }
   }
 
-  return { archRulesPath: targetArchRules, createdArchRules, hookPath, installedHook };
+  return {
+    archRulesPath: targetArchRules,
+    createdArchRules,
+    preset: presetInput,
+    hookPath,
+    installedHook,
+  };
 }

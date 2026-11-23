@@ -9,6 +9,7 @@ import { checkProviderAvailability, createLlmProvider, LlmProvider } from './ai/
 import { checkSemanticDuplication } from './ai/semanticChecker.js';
 import { extractFunctionsFromSourceFile, loadOrBuildFunctionIndex } from './ast/indexer.js';
 import { createFastAstProject, loadPathAliases, loadSourceFilesIntoProject } from './ast/parser.js';
+import { checkCircularDependencies } from './ast/rules/circularDeps.js';
 import { checkDependencies } from './ast/rules/depsCheck.js';
 import { checkFileAndFunctionSizes } from './ast/rules/fileSize.js';
 import { checkLayerBoundaries } from './ast/rules/layerBoundary.js';
@@ -22,6 +23,7 @@ import { logger } from './utils/logger.js';
 export * from './types.js';
 export * from './config/schema.js';
 export * from './config/loader.js';
+export * from './config/presets.js';
 export { initProject, type InitProjectResult } from './utils/init.js';
 export { loadProjectEnvFiles, parseDotEnvContent } from './utils/env.js';
 export {
@@ -160,6 +162,9 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
   const sourceFiles = loadSourceFilesIntoProject(project, projectRoot, files);
 
   const { issues: layerIssues, edges } = checkLayerBoundaries(projectRoot, sourceFiles, config, aliasConfig);
+  const circularIssues = config.thresholds.detect_circular_dependencies
+    ? checkCircularDependencies(projectRoot, sourceFiles, aliasConfig, edges)
+    : [];
   const sizeIssues = checkFileAndFunctionSizes(sourceFiles, config);
   const checkPkgJson =
     collected.mode === 'full' || collected.allStagedFiles.some((f) => f === 'package.json');
@@ -167,7 +172,7 @@ export async function runAudit(options: RunAuditOptions = {}): Promise<AuditRepo
     checkPackageJson: checkPkgJson,
   });
 
-  const astIssues: AuditIssue[] = [...layerIssues, ...sizeIssues, ...depIssues];
+  const astIssues: AuditIssue[] = [...layerIssues, ...circularIssues, ...sizeIssues, ...depIssues];
   const astDurationMs = performance.now() - astStart;
   const hasAstCritical = astIssues.some((i) => i.severity === 'critical');
 

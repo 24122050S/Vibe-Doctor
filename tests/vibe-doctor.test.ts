@@ -10,6 +10,7 @@ import {
   findTopCandidateFunctions,
 } from '../src/ast/indexer.js';
 import {
+  AVAILABLE_PRESETS,
   initProject,
   loadArchRules,
   loadProjectEnvFiles,
@@ -456,5 +457,67 @@ describe('vibe-doctor — Init, Git Staged Mode & HTML Dependency Graph Report',
     expect(secondRes.files[0].action).toBe('updated');
     const claudeMdAfter = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
     expect(claudeMdAfter.match(/<!-- VIBE-DOCTOR:START -->/g)?.length).toBe(1);
+  });
+
+  it('detects runtime circular dependencies (A -> B -> C -> A) while ignoring TypeScript import type cycles', async () => {
+    const root = createTempProject();
+    writeProjectFile(root, '.archrules.yaml', SAMPLE_ARCHRULES);
+
+    // 3-node runtime cycle: orderService -> userService -> loyaltyService -> orderService
+    writeProjectFile(
+      root,
+      'src/services/orderService.ts',
+      `import { getUser } from './userService';\nexport const createOrder = () => getUser();\n`
+    );
+    writeProjectFile(
+      root,
+      'src/services/userService.ts',
+      `import { calcPoints } from './loyaltyService';\nexport const getUser = () => calcPoints();\n`
+    );
+    writeProjectFile(
+      root,
+      'src/services/loyaltyService.ts',
+      `import { createOrder } from './orderService';\nexport const calcPoints = () => createOrder;\n`
+    );
+
+    // Type-only mutual reference (MUST NOT be flagged as runtime circular dependency)
+    writeProjectFile(
+      root,
+      'src/services/typeA.ts',
+      `import type { TypeB } from './typeB';\nexport interface TypeA { b?: TypeB; }\n`
+    );
+    writeProjectFile(
+      root,
+      'src/services/typeB.ts',
+      `import type { TypeA } from './typeA';\nexport interface TypeB { a?: TypeA; }\n`
+    );
+
+    const report = await runAudit({ projectRoot: root, ai: false });
+    const cycleIssues = report.issues.filter((i) => i.ruleId === 'circular-dependency');
+
+    // Deduplicated to exactly 1 canonical cycle issue, and typeA <-> typeB is ignored
+    expect(cycleIssues).toHaveLength(1);
+    expect(cycleIssues[0].severity).toBe('critical');
+    expect(cycleIssues[0].message).toContain('src/services/loyaltyService.ts');
+    expect(cycleIssues[0].message).toContain('src/services/orderService.ts');
+    expect(cycleIssues[0].message).toContain('src/services/userService.ts');
+    expect(report.edges.filter((e) => e.violated).length).toBe(3);
+  });
+
+  it('scaffolds valid .archrules.yaml for all multi-framework presets (nextjs, nestjs, react-vite, express)', () => {
+    for (const preset of AVAILABLE_PRESETS) {
+      const root = createTempProject();
+      const res = initProject(root, { preset, installHook: false });
+      expect(res.createdArchRules).toBe(true);
+      expect(res.preset).toBe(preset);
+
+      const loaded = loadArchRules(root, { allowDefaultFallback: false });
+      expect(loaded.usedDefaultConfig).toBe(false);
+      expect(Object.keys(loaded.config.layers).length).toBeGreaterThanOrEqual(3);
+      expect(loaded.config.thresholds.detect_circular_dependencies).toBe(true);
+    }
+
+    const badRoot = createTempProject();
+    expect(() => initProject(badRoot, { preset: 'unknown-framework' })).toThrow(/Preset không hợp lệ/);
   });
 });

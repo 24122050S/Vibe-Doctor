@@ -10,10 +10,12 @@ export const ThresholdsSchema = z
   .object({
     max_file_lines: z.number().int().positive().default(300),
     max_function_lines: z.number().int().positive().default(50),
+    detect_circular_dependencies: z.boolean().default(true),
   })
   .default({
     max_file_lines: 300,
     max_function_lines: 50,
+    detect_circular_dependencies: true,
   });
 
 export const DependenciesConfigSchema = z

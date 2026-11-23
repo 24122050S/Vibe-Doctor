@@ -57,7 +57,7 @@ flowchart TD
     Commit["git commit / npx vibe-doctor audit"] --> CLI["vibe-doctor Orchestrator"]
 
     CLI --> Tier1["⚡ Tầng 1: Static AST Scanner (ts-morph)<br/>0 API Cost · < 300ms"]
-    Tier1 --> R1["Layer Boundary<br/>(UI -> DB / Forbidden Imports)"]
+    Tier1 --> R1["Layer Boundary & Circular Deps<br/>(Forbidden Imports & A -> B -> A)"]
     Tier1 --> R2["Clean Code Limits<br/>(Max File & Function LOC)"]
     Tier1 --> R3["Dependency Whitelist<br/>(strict_mode & banned)"]
 
@@ -113,8 +113,8 @@ npm run build
 # 2. (Tuỳ chọn) Đăng ký lệnh vibe-doctor dùng toàn cục trên máy
 npm link
 
-# 3. Khởi tạo .archrules.yaml & cài đặt Git pre-commit hook cho một dự án
-npx vibe-doctor init
+# 3. Khởi tạo .archrules.yaml theo preset (nextjs | nestjs | react-vite | express) & cài Git hook
+npx vibe-doctor init --preset nextjs
 
 # 4. Đồng bộ luật kiến trúc sang .cursor/rules, AGENTS.md & CLAUDE.md (Phòng bệnh chủ động!)
 npx vibe-doctor sync-rules
@@ -201,7 +201,7 @@ npx vibe-doctor check-ai --ping
 | :--- | :--- | :--- |
 | `vibe-doctor audit [dir]` | Kiểm toán kiến trúc 2 tầng và sinh Auto Fix-Prompt | `-s, --staged`, `--semantic`, `--no-ai`, `--strict`, `--json`, `--html [file]`, `-c <path>` |
 | `vibe-doctor sync-rules [dir]` | Sinh `.cursor/rules/vibe-doctor.mdc`, `AGENTS.md`, `CLAUDE.md` từ `.archrules.yaml` + danh sách hàm sẵn có | `-t, --targets <list>`, `--no-index`, `-c <path>` |
-| `vibe-doctor init [dir]` | Tạo `.archrules.yaml` mẫu & gắn Git `pre-commit` hook | `-f, --force`, `--no-hook` |
+| `vibe-doctor init [dir]` | Tạo `.archrules.yaml` theo preset & gắn Git `pre-commit` hook | `-p, --preset <nextjs\|nestjs\|react-vite\|express>`, `-f, --force`, `--no-hook` |
 | `vibe-doctor index [dir]` | Quét AST lập chỉ mục hàm vào `.vibe-cache.json` | — |
 | `vibe-doctor report [dir]` | Tạo dashboard `vibe-report.html` kèm Dependency Graph | `-o <output>`, `--semantic`, `--no-ai`, `-c <path>` |
 | `vibe-doctor check-ai [dir]` | Kiểm tra `.env` / API Key & ping thử kết nối LLM Tầng 2 | `--ping`, `-c <path>` |

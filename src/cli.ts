@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { checkProviderAvailability, createLlmProvider } from './ai/provider.js';
 import { buildFunctionIndex, VIBE_CACHE_FILENAME } from './ast/indexer.js';
 import { ConfigLoadError, loadArchRules } from './config/loader.js';
+import { AVAILABLE_PRESETS } from './config/presets.js';
 import { generateHtmlReport } from './reporters/htmlReport.js';
 import {
   AgentRuleTarget,
@@ -117,11 +118,43 @@ function registerSyncRulesCommand(program: Command): void {
     );
 }
 
+function registerInitCommand(program: Command): void {
+  program
+    .command('init')
+    .description('Khởi tạo file .archrules.yaml theo preset và cài đặt Git pre-commit hook')
+    .argument('[dir]', 'Thư mục gốc dự án', '.')
+    .option(
+      '-p, --preset <name>',
+      `Preset kiến trúc (${AVAILABLE_PRESETS.join(' | ')})`,
+      'nextjs'
+    )
+    .option('-f, --force', 'Ghi đè file .archrules.yaml nếu đã tồn tại', false)
+    .option('--no-hook', 'Không cài đặt Git pre-commit hook')
+    .action((dir: string, opts: { preset?: string; force?: boolean; hook?: boolean }) => {
+      try {
+        const res = initProject(dir, {
+          preset: opts.preset,
+          force: opts.force,
+          installHook: opts.hook,
+        });
+        logger.success(
+          res.createdArchRules
+            ? `Đã khởi tạo cấu hình kiến trúc (preset: ${res.preset}): ${res.archRulesPath}`
+            : `File ${res.archRulesPath} đã tồn tại (dùng --force để ghi đè).`
+        );
+        if (res.installedHook && res.hookPath) logger.success(`Đã cài đặt Git hook: ${res.hookPath}`);
+      } catch (err) {
+        logger.error(err instanceof Error ? err.message : String(err));
+        process.exitCode = 1;
+      }
+    });
+}
+
 export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
   const program = new Command()
     .name('vibe-doctor')
     .description('🩺 AI Codebase Governance & Architecture Guardrail CLI')
-    .version('1.1.0');
+    .version('1.2.0');
 
   program
     .command('audit', { isDefault: true })
@@ -161,26 +194,7 @@ export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
       }
     });
 
-  program
-    .command('init')
-    .description('Khởi tạo file .archrules.yaml mẫu và cài đặt Git pre-commit hook')
-    .argument('[dir]', 'Thư mục gốc dự án', '.')
-    .option('-f, --force', 'Ghi đè file .archrules.yaml nếu đã tồn tại', false)
-    .option('--no-hook', 'Không cài đặt Git pre-commit hook')
-    .action((dir: string, opts: { force?: boolean; hook?: boolean }) => {
-      try {
-        const res = initProject(dir, { force: opts.force, installHook: opts.hook });
-        logger.success(
-          res.createdArchRules
-            ? `Đã khởi tạo cấu hình kiến trúc: ${res.archRulesPath}`
-            : `File ${res.archRulesPath} đã tồn tại (dùng --force để ghi đè).`
-        );
-        if (res.installedHook && res.hookPath) logger.success(`Đã cài đặt Git hook: ${res.hookPath}`);
-      } catch (err) {
-        logger.error(err instanceof Error ? err.message : String(err));
-        process.exitCode = 1;
-      }
-    });
+  registerInitCommand(program);
 
   program
     .command('index')
