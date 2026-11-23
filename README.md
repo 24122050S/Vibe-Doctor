@@ -116,13 +116,16 @@ npm link
 # 3. Khởi tạo .archrules.yaml & cài đặt Git pre-commit hook cho một dự án
 npx vibe-doctor init
 
-# 4. Quét toàn bộ dự án hiện tại
+# 4. Đồng bộ luật kiến trúc sang .cursor/rules, AGENTS.md & CLAUDE.md (Phòng bệnh chủ động!)
+npx vibe-doctor sync-rules
+
+# 5. Quét toàn bộ dự án hiện tại
 npx vibe-doctor audit
 
-# 5. Chỉ quét các file đang staged (chế độ dành cho Git pre-commit hook)
+# 6. Chỉ quét các file đang staged (chế độ dành cho Git pre-commit hook)
 npx vibe-doctor audit --staged
 
-# 6. Xuất báo cáo đồ thị phụ thuộc trực quan ra vibe-report.html
+# 7. Xuất báo cáo đồ thị phụ thuộc trực quan ra vibe-report.html
 npx vibe-doctor report
 ```
 
@@ -197,6 +200,7 @@ npx vibe-doctor check-ai --ping
 | Lệnh | Mô tả | Cờ tùy chọn nổi bật |
 | :--- | :--- | :--- |
 | `vibe-doctor audit [dir]` | Kiểm toán kiến trúc 2 tầng và sinh Auto Fix-Prompt | `-s, --staged`, `--semantic`, `--no-ai`, `--strict`, `--json`, `--html [file]`, `-c <path>` |
+| `vibe-doctor sync-rules [dir]` | Sinh `.cursor/rules/vibe-doctor.mdc`, `AGENTS.md`, `CLAUDE.md` từ `.archrules.yaml` + danh sách hàm sẵn có | `-t, --targets <list>`, `--no-index`, `-c <path>` |
 | `vibe-doctor init [dir]` | Tạo `.archrules.yaml` mẫu & gắn Git `pre-commit` hook | `-f, --force`, `--no-hook` |
 | `vibe-doctor index [dir]` | Quét AST lập chỉ mục hàm vào `.vibe-cache.json` | — |
 | `vibe-doctor report [dir]` | Tạo dashboard `vibe-report.html` kèm Dependency Graph | `-o <output>`, `--semantic`, `--no-ai`, `-c <path>` |

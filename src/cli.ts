@@ -7,6 +7,11 @@ import { checkProviderAvailability, createLlmProvider } from './ai/provider.js';
 import { buildFunctionIndex, VIBE_CACHE_FILENAME } from './ast/indexer.js';
 import { ConfigLoadError, loadArchRules } from './config/loader.js';
 import { generateHtmlReport } from './reporters/htmlReport.js';
+import {
+  AgentRuleTarget,
+  DEFAULT_RULE_TARGETS,
+  syncAgentRules,
+} from './reporters/ruleSync.js';
 import { renderTerminalReport } from './reporters/terminal.js';
 import { loadProjectEnvFiles } from './utils/env.js';
 import { initProject } from './utils/init.js';
@@ -61,11 +66,62 @@ function registerCheckAiCommand(program: Command): void {
     });
 }
 
+function registerSyncRulesCommand(program: Command): void {
+  program
+    .command('sync-rules')
+    .description(
+      'Tự động sinh rule kiến trúc chủ động (.cursor/rules, AGENTS.md, CLAUDE.md) từ .archrules.yaml'
+    )
+    .argument('[dir]', 'Thư mục gốc dự án', '.')
+    .option('-c, --config <path>', 'Đường dẫn tùy chỉnh tới file .archrules.yaml')
+    .option(
+      '-t, --targets <targets>',
+      'Danh sách đích phân tách bằng dấu phẩy (cursor,agents,claude,windsurf)',
+      DEFAULT_RULE_TARGETS.join(',')
+    )
+    .option('--no-index', 'Không đính kèm danh sách hàm hiện có vào file rule')
+    .action(
+      (
+        dir: string,
+        opts: { config?: string; targets?: string; index?: boolean }
+      ) => {
+        try {
+          const projectRoot = path.resolve(dir);
+          const { config } = loadArchRules(projectRoot, { configPath: opts.config });
+          const validSet = new Set<AgentRuleTarget>(['cursor', 'agents', 'claude', 'windsurf']);
+          const parsedTargets = (opts.targets ?? '')
+            .split(',')
+            .map((s) => s.trim().toLowerCase() as AgentRuleTarget)
+            .filter((t) => validSet.has(t));
+
+          const targets = parsedTargets.length > 0 ? parsedTargets : DEFAULT_RULE_TARGETS;
+          const exportedFunctions =
+            opts.index !== false
+              ? buildFunctionIndex(projectRoot, { persist: true }).entries
+              : [];
+
+          const res = syncAgentRules(projectRoot, config, {
+            targets,
+            exportedFunctions,
+          });
+
+          for (const item of res.files) {
+            const verb = item.action === 'created' ? 'Đã tạo mới' : 'Đã cập nhật';
+            logger.success(`[${item.target}] ${verb}: ${item.filePath}`);
+          }
+        } catch (err) {
+          logger.error(err instanceof Error ? err.message : String(err));
+          process.exitCode = 1;
+        }
+      }
+    );
+}
+
 export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
   const program = new Command()
     .name('vibe-doctor')
     .description('🩺 AI Codebase Governance & Architecture Guardrail CLI')
-    .version('1.0.0');
+    .version('1.1.0');
 
   program
     .command('audit', { isDefault: true })
@@ -166,6 +222,7 @@ export function buildCliProgram(runAuditFn: typeof RunAuditFn): Command {
     });
 
   registerCheckAiCommand(program);
+  registerSyncRulesCommand(program);
 
   return program;
 }

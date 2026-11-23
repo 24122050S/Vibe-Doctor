@@ -11,9 +11,11 @@ import {
 } from '../src/ast/indexer.js';
 import {
   initProject,
+  loadArchRules,
   loadProjectEnvFiles,
   parseDotEnvContent,
   runAudit,
+  syncAgentRules,
 } from '../src/index.js';
 import { generateHtmlReport } from '../src/reporters/htmlReport.js';
 
@@ -410,5 +412,49 @@ describe('vibe-doctor — Init, Git Staged Mode & HTML Dependency Graph Report',
     expect(mockEnv.LOCAL_ONLY).toBe('1');
     expect(mockEnv.BASE_ONLY).toBe('2');
     expect(mockEnv.SHELL_SET).toBe('already_in_shell');
+  });
+
+  it('syncs .archrules.yaml and exported functions into .cursor/rules, AGENTS.md, and CLAUDE.md non-destructively', () => {
+    const root = createTempProject();
+    writeProjectFile(root, '.archrules.yaml', SAMPLE_ARCHRULES);
+    writeProjectFile(
+      root,
+      'src/utils/currency.ts',
+      `/** Định dạng tiền tệ VNĐ */\nexport function formatVND(amount: number): string { return String(amount); }\n`
+    );
+    // Seed existing custom user notes in CLAUDE.md to verify non-destructive marker upsert
+    writeProjectFile(root, 'CLAUDE.md', '# Custom Team Notes\nAlways write tests in Vitest.\n');
+
+    const { config } = loadArchRules(root);
+    const cache = buildFunctionIndex(root, { persist: false });
+    const res = syncAgentRules(root, config, {
+      targets: ['cursor', 'agents', 'claude', 'windsurf'],
+      exportedFunctions: cache.entries,
+    });
+
+    expect(res.files).toHaveLength(4);
+
+    const cursorRule = fs.readFileSync(
+      path.join(root, '.cursor', 'rules', 'vibe-doctor.mdc'),
+      'utf-8'
+    );
+    expect(cursorRule).toContain('alwaysApply: true');
+    expect(cursorRule).toContain('Layer `ui`');
+    expect(cursorRule).toContain('formatVND(amount: number): string');
+
+    const claudeMd = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+    expect(claudeMd).toContain('# Custom Team Notes');
+    expect(claudeMd).toContain('Always write tests in Vitest.');
+    expect(claudeMd).toContain('<!-- VIBE-DOCTOR:START -->');
+    expect(claudeMd).toContain('src/db/**');
+
+    // Re-running syncAgentRules updates in-place without duplicating blocks
+    const secondRes = syncAgentRules(root, config, {
+      targets: ['claude'],
+      exportedFunctions: cache.entries,
+    });
+    expect(secondRes.files[0].action).toBe('updated');
+    const claudeMdAfter = fs.readFileSync(path.join(root, 'CLAUDE.md'), 'utf-8');
+    expect(claudeMdAfter.match(/<!-- VIBE-DOCTOR:START -->/g)?.length).toBe(1);
   });
 });

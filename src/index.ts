@@ -24,6 +24,13 @@ export * from './config/schema.js';
 export * from './config/loader.js';
 export { initProject, type InitProjectResult } from './utils/init.js';
 export { loadProjectEnvFiles, parseDotEnvContent } from './utils/env.js';
+export {
+  syncAgentRules,
+  upsertMarkedMarkdownFile,
+  type AgentRuleTarget,
+  type SyncRulesOptions,
+  type SyncRulesResult,
+} from './reporters/ruleSync.js';
 
 export interface RunAuditOptions {
   projectRoot?: string;
