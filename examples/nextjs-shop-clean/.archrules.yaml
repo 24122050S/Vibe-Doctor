@@ -1,0 +1,44 @@
+version: "1.0"
+project_type: "nextjs-clean-arch"
+
+layers:
+  app:
+    path: "src/app/**"
+    cannot_import:
+      - "src/db/**"
+  ui:
+    path: "src/components/**"
+    cannot_import:
+      - "src/db/**"
+      - "src/services/backend/**"
+  services:
+    path: "src/services/**"
+    cannot_import:
+      - "src/components/**"
+      - "src/app/**"
+  db:
+    path: "src/db/**"
+    cannot_import:
+      - "src/components/**"
+      - "src/services/**"
+      - "src/app/**"
+
+thresholds:
+  max_file_lines: 300
+  max_function_lines: 40
+
+dependencies:
+  allowed_ui:
+    - "lucide-react"
+    - "framer-motion"
+    - "@radix-ui/*"
+  allowed_validation:
+    - "zod"
+  strict_mode: true
+
+ai_eval:
+  provider: "gemini"
+  model: "gemini-2.5-flash"
+  check_semantic_duplication: true
+  check_prd_compliance: true
+  prd_path: "PRD.md"

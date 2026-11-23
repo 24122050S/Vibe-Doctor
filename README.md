@@ -202,18 +202,23 @@ npx vibe-doctor check-ai --ping
 
 ---
 
-## 🧪 Thử nghiệm ngay với Dự án Mẫu (`examples/nextjs-shop`)
+## 🧪 Thử nghiệm ngay với Bộ Dự án Mẫu (Before vs After Fix-Prompt)
 
-Kho mã nguồn đi kèm sẵn một mini-project Next.js tại [`examples/nextjs-shop`](./examples/nextjs-shop) mô phỏng đầy đủ các lỗi *Vibe Coding* thực tế (`Checkout.tsx` gọi thẳng `@/db`, dùng `axios` chưa duyệt, hàm trùng `formatPrice` so với `formatVND`, và sai lệch quy tắc miễn phí vận chuyển trong `PRD.md`):
+Kho mã nguồn đi kèm 2 phiên bản đối chứng để bạn trải nghiệm trọn vẹn vòng lặp kiểm toán & tự chữa lành kiến trúc:
+- 🔴 **[`examples/nextjs-shop`](./examples/nextjs-shop) (Before):** Mô phỏng các lỗi *Vibe Coding* kinh điển (`Checkout.tsx` gọi thẳng `@/db`, dùng `axios` chưa duyệt, hàm trùng `formatPrice` so với `formatVND`, và sai lệch quy tắc miễn phí vận chuyển trong `PRD.md`).
+- 🟢 **[`examples/nextjs-shop-clean`](./examples/nextjs-shop-clean) (After):** Phiên bản đã refactor theo đúng từng chỉ dẫn trong **Auto Fix-Prompt** của `vibe-doctor`, vượt qua kiểm toán `--strict` với **0 lỗi**.
 
 ```bash
-# Chạy kiểm toán AST siêu tốc (~50ms) và xem Auto Fix-Prompt
+# 1. Quét bản lỗi (~50ms) -> Bị chặn commit (4 CRITICAL, 2 WARNING) + sinh Auto Fix-Prompt
 node bin/vibe-doctor.js audit examples/nextjs-shop --no-ai
 
-# Sinh báo cáo đồ thị phụ thuộc tương tác examples/nextjs-shop/vibe-report.html
+# 2. Quét bản đã sửa theo Auto Fix-Prompt -> PASSED xanh mượt (0 CRITICAL, 0 WARNING)
+node bin/vibe-doctor.js audit examples/nextjs-shop-clean --strict --no-ai
+
+# 3. Sinh báo cáo đồ thị phụ thuộc tương tác vibe-report.html
 node bin/vibe-doctor.js report examples/nextjs-shop --no-ai
 
-# Chạy đầy đủ cả Tầng 1 + Tầng 2 (sau khi điền GEMINI_API_KEY vào .env)
+# 4. Chạy đầy đủ cả Tầng 1 + Tầng 2 (sau khi điền GEMINI_API_KEY vào .env)
 node bin/vibe-doctor.js audit examples/nextjs-shop --semantic
 ```
 

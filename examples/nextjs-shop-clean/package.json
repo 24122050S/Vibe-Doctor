@@ -1,0 +1,13 @@
+{
+  "name": "nextjs-shop-clean-example",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "lucide-react": "^0.460.0",
+    "@radix-ui/react-dialog": "^1.1.2",
+    "zod": "^3.24.0"
+  }
+}
